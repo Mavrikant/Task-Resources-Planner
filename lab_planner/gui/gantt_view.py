@@ -91,17 +91,36 @@ class GanttFrame(tk.Frame):
         self.ax.invert_yaxis()
 
         self.ax.set_xlim(0, HORIZON)
-        self.ax.set_xticks(range(0, HORIZON + 1, HOURS_PER_DAY))
-        self.ax.set_xticklabels(
-            [f"{name}\n{d*HOURS_PER_DAY}h" for d, name in enumerate(DAY_NAMES)] + ["+1w"],
-            fontsize=8,
-        )
+
+        # Major ticks every 6 hours; bold day-name where hour-of-day == 0.
+        major_step = 6
+        major_ticks = list(range(0, HORIZON + 1, major_step))
+        major_labels = []
+        for t in major_ticks:
+            if t == HORIZON:
+                major_labels.append("+1w")
+                continue
+            day, hour_of_day = divmod(t, HOURS_PER_DAY)
+            if hour_of_day == 0:
+                major_labels.append(f"{DAY_NAMES[day]}\n{hour_of_day:02d}:00")
+            else:
+                major_labels.append(f"{hour_of_day:02d}:00")
+        self.ax.set_xticks(major_ticks)
+        self.ax.set_xticklabels(major_labels, fontsize=7)
+
+        # Minor ticks every hour for fine grid + readability.
         self.ax.set_xticks(range(HORIZON + 1), minor=True)
         self.ax.grid(axis="x", which="major", linestyle="-",
-                     color="#888", alpha=0.6)
+                     color="#888", alpha=0.45)
         self.ax.grid(axis="x", which="minor", linestyle=":",
-                     color="#cccccc", alpha=0.6)
-        self.ax.set_xlabel("Hour of week")
+                     color="#cccccc", alpha=0.5)
+
+        # Bold vertical separators at day boundaries on top of the grid.
+        for d in range(1, 7):
+            self.ax.axvline(d * HOURS_PER_DAY, color="#555",
+                             linewidth=0.9, alpha=0.7, zorder=1)
+
+        self.ax.set_xlabel("Hour of day  (Mon-Sun, 0-23)")
         self.ax.set_title("Lab equipment weekly schedule")
 
         # Legend: tasks plus the two background categories.
