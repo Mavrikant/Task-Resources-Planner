@@ -123,6 +123,41 @@ def test_work_hours_only_infeasible_when_too_long_for_one_workday():
     assert res.status_name in {"INFEASIBLE", "INVALID"}
 
 
+def test_deadline_caps_end_slot():
+    tasks = [Task("Late", requirements={"VSG": 1}, hours=4, deadline=20)]
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=5)
+    assert res.feasible
+    a = res.assignments[0]
+    assert a.end_slot <= 20
+
+
+def test_deadline_too_tight_is_infeasible():
+    """Two tasks both need OBB (1 unit), 6h each, both must finish by slot 10
+    — together they need 12 OBB-hours but only 10 are available."""
+    tasks = [
+        Task("A", requirements={"OBB": 1}, hours=6, deadline=10),
+        Task("B", requirements={"OBB": 1}, hours=6, deadline=10),
+    ]
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=5)
+    assert not res.feasible
+    assert res.status_name in {"INFEASIBLE", "INVALID"}
+
+
+def test_priority_pulls_first_task_earlier():
+    """When two same-resource tasks would otherwise tie on makespan,
+    the task earlier in the list should start earlier."""
+    tasks = [
+        Task("HighPri", requirements={"OBB": 1}, hours=3),  # index 0
+        Task("LowPri",  requirements={"OBB": 1}, hours=3),  # index 1
+    ]
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=5)
+    assert res.feasible
+    starts = {a.task_name: a.start_slot for a in res.assignments}
+    assert starts["HighPri"] < starts["LowPri"], (
+        f"expected HighPri to start before LowPri, got {starts}"
+    )
+
+
 def test_three_tasks_share_resources_correctly():
     """Three short tasks each need VSG (3 units) and OBB (1 unit).
     OBB serializes them; VSG can run in parallel."""

@@ -13,6 +13,7 @@ from ..models import (
     ScheduleResult,
     Task,
     duplicate_task,
+    format_deadline,
     format_requirements,
 )
 from ..persistence import (
@@ -221,21 +222,33 @@ class TasksFrame(tk.Frame):
         super().__init__(master)
         self.app = app
 
-        # left: task list
+        # left: task list (drag rows to reorder; first row = highest priority)
         left = tk.Frame(self)
         left.pack(side="left", fill="y", padx=8, pady=8)
-        tk.Label(left, text="Tasks", font=("TkDefaultFont", 11, "bold")).pack(anchor="w")
-        cols = ("name", "summary", "hours")
+        tk.Label(left, text="Tasks (drag to reorder = priority)",
+                 font=("TkDefaultFont", 11, "bold")).pack(anchor="w")
+        cols = ("priority", "name", "summary", "hours", "deadline")
         self.tree = ttk.Treeview(left, columns=cols, show="headings",
                                   height=20, selectmode="browse")
-        self.tree.heading("name", text="Name")
-        self.tree.heading("summary", text="Resources")
-        self.tree.heading("hours", text="h")
-        self.tree.column("name", width=160, anchor="w")
-        self.tree.column("summary", width=240, anchor="w")
-        self.tree.column("hours", width=42, anchor="center")
+        self.tree.heading("priority", text="#")
+        self.tree.heading("name",     text="Name")
+        self.tree.heading("summary",  text="Resources")
+        self.tree.heading("hours",    text="h")
+        self.tree.heading("deadline", text="Deadline")
+        self.tree.column("priority", width=32,  anchor="center")
+        self.tree.column("name",     width=160, anchor="w")
+        self.tree.column("summary",  width=210, anchor="w")
+        self.tree.column("hours",    width=36,  anchor="center")
+        self.tree.column("deadline", width=92,  anchor="w")
         self.tree.pack(fill="y", expand=True)
         self.tree.bind("<<TreeviewSelect>>", self._on_select)
+
+        # Drag-to-reorder.
+        self._drag_src_iid: Optional[str] = None
+        self._drag_started: bool = False
+        self.tree.bind("<ButtonPress-1>",   self._on_drag_start, add="+")
+        self.tree.bind("<B1-Motion>",       self._on_drag_motion, add="+")
+        self.tree.bind("<ButtonRelease-1>", self._on_drag_end,    add="+")
 
         btn_row = tk.Frame(left)
         btn_row.pack(fill="x", pady=4)
@@ -269,11 +282,13 @@ class TasksFrame(tk.Frame):
 
     def refresh(self):
         self.tree.delete(*self.tree.get_children())
-        for t in self.app.tasks:
+        for i, t in enumerate(self.app.tasks):
             self.tree.insert("", "end",
-                              values=(t.name,
+                              values=(i + 1,
+                                      t.name,
                                       format_requirements(t.requirements),
-                                      t.hours))
+                                      t.hours,
+                                      format_deadline(t.deadline)))
         sel_idx = self._current_index()
         if sel_idx is None:
             self.editor.show_task(None)
@@ -307,9 +322,42 @@ class TasksFrame(tk.Frame):
         if 0 <= idx < len(children):
             t = self.app.tasks[idx]
             self.tree.item(children[idx],
-                            values=(t.name,
+                            values=(idx + 1,
+                                    t.name,
                                     format_requirements(t.requirements),
-                                    t.hours))
+                                    t.hours,
+                                    format_deadline(t.deadline)))
+
+    # --- drag-to-reorder handlers ---
+
+    def _on_drag_start(self, event):
+        iid = self.tree.identify_row(event.y)
+        self._drag_src_iid = iid if iid else None
+        self._drag_started = False
+
+    def _on_drag_motion(self, event):
+        if self._drag_src_iid is None:
+            return
+        if not self._drag_started:
+            self.tree.config(cursor="hand2")
+            self._drag_started = True
+
+    def _on_drag_end(self, event):
+        if self._drag_src_iid is None:
+            return
+        self.tree.config(cursor="")
+        if self._drag_started:
+            dst_iid = self.tree.identify_row(event.y)
+            if dst_iid and dst_iid != self._drag_src_iid:
+                src_idx = self.tree.index(self._drag_src_iid)
+                dst_idx = self.tree.index(dst_iid)
+                task = self.app.tasks.pop(src_idx)
+                self.app.tasks.insert(dst_idx, task)
+                self.app.mark_dirty()
+                self.refresh()
+                self.select(dst_idx)
+        self._drag_src_iid = None
+        self._drag_started = False
 
     def _add_task(self):
         if not self.app.resources:

@@ -11,6 +11,14 @@ chart in a tkinter GUI.
 - **Tasks are first-class.** Each task declares **multiple resource
   requirements at once** (e.g. *2× VSG + 1× OBB + 1× OSC*) and locks
   every required physical unit together for its duration.
+- **Priority by list order.** The Tasks tab is a draggable priority
+  list — the row at the top has the highest priority and is pulled
+  toward earlier starts when otherwise tied with another task. Drag
+  rows up or down to reorder.
+- **Deadlines.** Each task can have an optional deadline — pick a
+  day-of-week and an hour-of-day; the task's end-slot must fall at or
+  before that point. Solver hard-fails (`INFEASIBLE`) if no schedule
+  meets every deadline.
 - **One-week horizon** — 7 days × 24 one-hour slots = 168 slots.
 - **Equipment pool** — defined in `equipment_pool.json` at the project
   root (loaded on startup, fallback to a hardcoded list if missing).
@@ -29,9 +37,12 @@ chart in a tkinter GUI.
   the solver. Off-hours-friendly tasks (e.g. ovens, long bake-outs)
   leave it off so they can run overnight or on weekends.
 - **Optimisation objective**
-  `100·makespan − 1·preferred_hits`, so:
-  1. The schedule is as short as possible.
-  2. Tasks drift toward green hours when there is slack.
+  `10000·makespan + 100·preferred_misses + 1·priority_weighted_starts`,
+  in lexicographic order:
+  1. **Makespan** — the schedule is as short as possible.
+  2. **Preferred slots** — tasks drift toward green hours when there is slack.
+  3. **Priority** — among otherwise tied solutions, tasks higher in
+     the list start earlier.
 - **Hard constraints** — unavailable hours, per-unit no-overlap (a
   single physical unit serves one task at a time), task contiguity.
 - **Save / load** projects as UTF-8 JSON (schema v2).

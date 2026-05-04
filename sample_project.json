@@ -52,37 +52,43 @@
   ],
   "tasks": [
     {
-      "name": "Radar integration",
+      "name": "Critical radar build",
       "requirements": {
         "VSG": 2,
         "OBB": 1,
         "OSC": 1
       },
       "hours": 4,
-      "preferred_slots": [
-        8,
-        9,
-        10,
-        11,
-        12,
-        13,
-        14,
-        15,
-        16,
-        17,
-        32,
-        33,
-        34,
-        35,
-        36,
-        37,
-        38,
-        39,
-        40,
-        41
-      ],
+      "preferred_slots": [],
       "unavailable_slots": [],
-      "work_hours_only": true
+      "work_hours_only": true,
+      "deadline": 42
+    },
+    {
+      "name": "IFF/IFR cross-check",
+      "requirements": {
+        "IFF": 2,
+        "IFR": 1,
+        "ADF T": 1
+      },
+      "hours": 3,
+      "preferred_slots": [],
+      "unavailable_slots": [],
+      "work_hours_only": true,
+      "deadline": 66
+    },
+    {
+      "name": "Comm bench",
+      "requirements": {
+        "RFCU": 2,
+        "CT94": 1,
+        "1553": 1
+      },
+      "hours": 5,
+      "preferred_slots": [],
+      "unavailable_slots": [],
+      "work_hours_only": true,
+      "deadline": null
     },
     {
       "name": "EW signal sweep",
@@ -104,41 +110,8 @@
         21
       ],
       "unavailable_slots": [],
-      "work_hours_only": false
-    },
-    {
-      "name": "IFF/IFR cross-check",
-      "requirements": {
-        "IFF": 2,
-        "IFR": 1,
-        "ADF T": 1
-      },
-      "hours": 3,
-      "preferred_slots": [],
-      "unavailable_slots": [],
-      "work_hours_only": true
-    },
-    {
-      "name": "Comm bench",
-      "requirements": {
-        "RFCU": 2,
-        "CT94": 1,
-        "1553": 1
-      },
-      "hours": 5,
-      "preferred_slots": [],
-      "unavailable_slots": [],
-      "work_hours_only": true
-    },
-    {
-      "name": "Bake out (oven, off-hours OK)",
-      "requirements": {
-        "Fırın": 2
-      },
-      "hours": 8,
-      "preferred_slots": [],
-      "unavailable_slots": [],
-      "work_hours_only": false
+      "work_hours_only": false,
+      "deadline": null
     },
     {
       "name": "1553 bus integration",
@@ -174,7 +147,8 @@
         119
       ],
       "unavailable_slots": [],
-      "work_hours_only": true
+      "work_hours_only": true,
+      "deadline": null
     },
     {
       "name": "Power & telemetry",
@@ -185,7 +159,19 @@
       "hours": 3,
       "preferred_slots": [],
       "unavailable_slots": [],
-      "work_hours_only": false
+      "work_hours_only": false,
+      "deadline": null
+    },
+    {
+      "name": "Bake out (oven, off-hours OK)",
+      "requirements": {
+        "Fırın": 2
+      },
+      "hours": 8,
+      "preferred_slots": [],
+      "unavailable_slots": [],
+      "work_hours_only": false,
+      "deadline": null
     }
   ]
 }

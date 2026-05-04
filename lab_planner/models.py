@@ -46,6 +46,7 @@ class Task:
     preferred_slots: set[int] = field(default_factory=set)
     unavailable_slots: set[int] = field(default_factory=set)
     work_hours_only: bool = False  # if True, must run inside Mon-Fri 08-18
+    deadline: Optional[int] = None  # task must finish (end_slot) at or before this slot (1..168)
 
     def __post_init__(self) -> None:
         if not self.name:
@@ -73,6 +74,16 @@ class Task:
             raise ValueError(
                 f"Slots cannot be both preferred and unavailable: {sorted(overlap)}"
             )
+        if self.deadline is not None:
+            self.deadline = int(self.deadline)
+            if not 1 <= self.deadline <= HORIZON:
+                raise ValueError(
+                    f"Task {self.name!r}: deadline {self.deadline} out of range [1, {HORIZON}]"
+                )
+            if self.deadline < self.hours:
+                raise ValueError(
+                    f"Task {self.name!r}: deadline {self.deadline} earlier than required hours ({self.hours})"
+                )
 
 
 @dataclass
@@ -168,6 +179,19 @@ def format_requirements(req: dict[str, int]) -> str:
     for name, qty in req.items():
         parts.append(f"{name}×{qty}" if qty > 1 else name)
     return " + ".join(parts) if parts else "(none)"
+
+
+def format_deadline(deadline: Optional[int]) -> str:
+    """Human-readable deadline like 'Tue 18:00' or 'end of Mon'; '-' for no deadline."""
+    if deadline is None:
+        return "-"
+    if deadline == HORIZON:
+        return "end of week"
+    day, hour = divmod(deadline, HOURS_PER_DAY)
+    if hour == 0:
+        # deadline == start of `day` == end of previous day
+        return f"end of {DAY_NAMES[day - 1]}"
+    return f"{DAY_NAMES[day]} {hour:02d}:00"
 
 
 _COPY_RE = re.compile(r"^(?P<stem>.*) \(copy(?: (?P<n>\d+))?\)$")

@@ -20,12 +20,14 @@ def test_roundtrip_preserves_everything(tmp_path: Path):
              hours=4,
              preferred_slots={10, 11, 12},
              unavailable_slots={0, 1, 2},
-             work_hours_only=True),
+             work_hours_only=True,
+             deadline=42),
         Task("Bake",
              requirements={"Fırın": 2},  # non-ASCII test
              hours=8,
              preferred_slots=set(),
-             unavailable_slots={50, 51}),
+             unavailable_slots={50, 51},
+             deadline=None),
     ]
     file = tmp_path / "proj.json"
     save_project(file, tasks, DEFAULT_RESOURCES)

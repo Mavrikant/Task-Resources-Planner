@@ -29,6 +29,7 @@ def save_project(path: str | Path,
                 "preferred_slots": sorted(t.preferred_slots),
                 "unavailable_slots": sorted(t.unavailable_slots),
                 "work_hours_only": t.work_hours_only,
+                "deadline": t.deadline,
             }
             for t in tasks
         ],
@@ -50,6 +51,7 @@ def load_project(path: str | Path) -> tuple[list[Task], list[Resource]]:
                  for r in data.get("resources", [])]
     tasks: list[Task] = []
     for t in data.get("tasks", []):
+        deadline = t.get("deadline")
         tasks.append(Task(
             name=t["name"],
             requirements={k: int(v) for k, v in t.get("requirements", {}).items()},
@@ -57,6 +59,7 @@ def load_project(path: str | Path) -> tuple[list[Task], list[Resource]]:
             preferred_slots=set(t.get("preferred_slots", [])),
             unavailable_slots=set(t.get("unavailable_slots", [])),
             work_hours_only=bool(t.get("work_hours_only", False)),
+            deadline=int(deadline) if deadline is not None else None,
         ))
     return tasks, resources
 

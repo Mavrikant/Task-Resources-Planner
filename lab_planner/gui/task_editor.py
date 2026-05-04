@@ -7,6 +7,7 @@ from typing import Callable, Optional
 
 from ..models import (
     DAY_NAMES,
+    DAYS,
     HORIZON,
     HOURS_PER_DAY,
     Resource,
@@ -249,6 +250,39 @@ class TaskEditorFrame(tk.Frame):
         )
         self.work_only_chk.pack(side="left")
 
+        # Deadline row
+        dl_row = tk.Frame(self)
+        dl_row.pack(fill="x", padx=8, pady=(0, 4))
+        self.deadline_on_var = tk.BooleanVar(value=False)
+        self.deadline_chk = tk.Checkbutton(
+            dl_row, text="Deadline:",
+            variable=self.deadline_on_var,
+            command=self._on_deadline_toggle,
+        )
+        self.deadline_chk.pack(side="left")
+        self.deadline_day_var = tk.StringVar(value=DAY_NAMES[0])
+        self.deadline_day = ttk.Combobox(
+            dl_row, textvariable=self.deadline_day_var,
+            values=DAY_NAMES, state="readonly", width=5,
+        )
+        self.deadline_day.pack(side="left", padx=(4, 4))
+        self.deadline_day.bind("<<ComboboxSelected>>",
+                                lambda e: self._on_deadline_changed())
+        self.deadline_hour_var = tk.IntVar(value=18)
+        self.deadline_hour = tk.Spinbox(
+            dl_row, from_=1, to=24, width=4,
+            textvariable=self.deadline_hour_var,
+            command=self._on_deadline_changed,
+        )
+        self.deadline_hour.pack(side="left")
+        self.deadline_hour_var.trace_add(
+            "write", lambda *a: self._on_deadline_changed()
+        )
+        tk.Label(dl_row, text=":00",
+                 fg="#666").pack(side="left")
+        self.deadline_label = tk.Label(dl_row, text="", fg="#666")
+        self.deadline_label.pack(side="left", padx=(12, 0))
+
         # requirements table
         req_frame = tk.LabelFrame(self, text="Required resources")
         req_frame.pack(fill="x", padx=8, pady=4)
@@ -290,6 +324,10 @@ class TaskEditorFrame(tk.Frame):
             self.name_var.set("")
             self.hours_var.set(1)
             self.work_only_var.set(False)
+            self.deadline_on_var.set(False)
+            self.deadline_day_var.set(DAY_NAMES[0])
+            self.deadline_hour_var.set(18)
+            self.deadline_label.config(text="")
             self.req_tree.delete(*self.req_tree.get_children())
             self._building = False
             return
@@ -298,9 +336,27 @@ class TaskEditorFrame(tk.Frame):
         self.name_var.set(task.name)
         self.hours_var.set(task.hours)
         self.work_only_var.set(task.work_hours_only)
+        self._load_deadline(task)
         self._refresh_requirements()
         self.slot_grid.load_from_task(task)
         self._building = False
+
+    def _load_deadline(self, task: Task):
+        if task.deadline is None:
+            self.deadline_on_var.set(False)
+            self.deadline_day_var.set(DAY_NAMES[0])
+            self.deadline_hour_var.set(18)
+        else:
+            self.deadline_on_var.set(True)
+            day, hour = divmod(task.deadline, HOURS_PER_DAY)
+            if hour == 0:
+                # E.g. 24 → "end of Mon": pick day=Mon, hour=24
+                day -= 1
+                hour = 24
+            self.deadline_day_var.set(DAY_NAMES[max(0, day)])
+            self.deadline_hour_var.set(hour)
+        self._refresh_deadline_label()
+        self._update_deadline_widgets_state()
 
     # --- events ---
 
@@ -329,6 +385,53 @@ class TaskEditorFrame(tk.Frame):
             return
         self._task.work_hours_only = bool(self.work_only_var.get())
         self._on_dirty()
+
+    # --- deadline ---
+
+    def _on_deadline_toggle(self):
+        self._update_deadline_widgets_state()
+        self._on_deadline_changed()
+
+    def _on_deadline_changed(self, *_a):
+        if self._building or self._task is None:
+            return
+        if not self.deadline_on_var.get():
+            self._task.deadline = None
+        else:
+            try:
+                day = DAY_NAMES.index(self.deadline_day_var.get())
+                hour = int(self.deadline_hour_var.get())
+            except (ValueError, tk.TclError):
+                return
+            if not 1 <= hour <= 24:
+                return
+            slot = day * HOURS_PER_DAY + hour
+            if slot < self._task.hours or slot > HORIZON:
+                # Show but don't apply invalid values; user can fix.
+                self._refresh_deadline_label(invalid=True)
+                return
+            self._task.deadline = slot
+        self._refresh_deadline_label()
+        self._on_dirty()
+        self._on_changed()
+
+    def _refresh_deadline_label(self, invalid: bool = False):
+        if invalid:
+            self.deadline_label.config(text="(deadline < hours)", fg="#c00")
+            return
+        if self._task is None or self._task.deadline is None:
+            self.deadline_label.config(text="", fg="#666")
+            return
+        from ..models import format_deadline
+        self.deadline_label.config(
+            text=f"= {format_deadline(self._task.deadline)}", fg="#666"
+        )
+
+    def _update_deadline_widgets_state(self):
+        on = self.deadline_on_var.get() and self._task is not None
+        state = "readonly" if on else "disabled"
+        self.deadline_day.config(state=state)
+        self.deadline_hour.config(state="normal" if on else "disabled")
 
     def _on_grid_change(self, slot: int, state: int):
         if self._task is None:
@@ -408,3 +511,5 @@ class TaskEditorFrame(tk.Frame):
         self.name_entry.config(state=state)
         self.hours_spin.config(state=state)
         self.work_only_chk.config(state=state)
+        self.deadline_chk.config(state=state)
+        self._update_deadline_widgets_state()

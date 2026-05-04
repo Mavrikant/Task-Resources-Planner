@@ -22,8 +22,9 @@ from .models import (
 )
 
 
-_MAKESPAN_W = 100   # dominating: shortest schedule wins
-_PREF_W = 1         # tie-break: prefer green slots
+_MAKESPAN_W = 10_000  # dominating: shortest schedule wins
+_PREF_W = 100         # secondary: prefer green slots strongly
+_PRIORITY_W = 1       # tertiary tie-break: high-priority tasks pull earlier
 
 
 def _effective_unavailable(task: Task) -> set[int]:
@@ -52,6 +53,9 @@ def _validate(tasks: list[Task], resources: list[Resource]) -> str | None:
             return (f"Task #{ti} {task.name!r}: needs {task.hours}h "
                     f"but only {available}h are available"
                     f"{extra} after unavailable slots are removed.")
+        if task.deadline is not None and task.deadline < task.hours:
+            return (f"Task #{ti} {task.name!r}: deadline {task.deadline} "
+                    f"is earlier than the required {task.hours}h.")
     return None
 
 
@@ -84,8 +88,10 @@ def build_and_solve(
 
     for ti, task in enumerate(tasks):
         d = task.hours
-        start = model.NewIntVar(0, horizon - d, f"t{ti}_start")
-        end = model.NewIntVar(d, horizon, f"t{ti}_end")
+        # If a deadline is set, the latest legal end is the deadline.
+        latest_end = task.deadline if task.deadline is not None else horizon
+        start = model.NewIntVar(0, latest_end - d, f"t{ti}_start")
+        end = model.NewIntVar(d, latest_end, f"t{ti}_end")
         model.Add(end == start + d)
 
         # For each required resource type, pick exactly `qty` distinct units.
@@ -145,7 +151,19 @@ def build_and_solve(
     else:
         total_pref = model.NewConstant(0)
 
-    model.Minimize(_MAKESPAN_W * makespan - _PREF_W * total_pref)
+    # Priority objective: list-position determines weight (first task
+    # = highest priority). Pulling high-priority tasks to early starts
+    # is enforced by minimising sum(weight[t] * start[t]).
+    n = len(task_records)
+    priority_term = sum(
+        (n - tr["task_idx"]) * tr["start"] for tr in task_records
+    )
+
+    model.Minimize(
+        _MAKESPAN_W * makespan
+        + _PRIORITY_W * priority_term
+        - _PREF_W * total_pref
+    )
 
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = float(time_limit_s)
@@ -228,6 +246,11 @@ def _infeasibility_hint(tasks: list[Task], resources: list[Resource]) -> str:
             hints.append(
                 f"Task #{ti} {task.name!r} needs {task.hours}h "
                 f"but only {free}h available{extra}."
+            )
+        if task.deadline is not None and task.deadline < task.hours:
+            hints.append(
+                f"Task #{ti} {task.name!r}: deadline {task.deadline}h "
+                f"is shorter than the required {task.hours}h."
             )
         for res, qty in task.requirements.items():
             avail = res_units.get(res, 0)

@@ -129,6 +129,30 @@ def test_task_work_hours_only_default_false():
     assert t.work_hours_only is False
 
 
+def test_task_deadline_default_none():
+    t = Task("X", requirements={"VSG": 1}, hours=2)
+    assert t.deadline is None
+
+
+def test_task_deadline_validation():
+    Task("X", requirements={"VSG": 1}, hours=4, deadline=10)
+    with pytest.raises(ValueError, match="deadline"):
+        Task("X", requirements={"VSG": 1}, hours=4, deadline=3)
+    with pytest.raises(ValueError, match="deadline"):
+        Task("X", requirements={"VSG": 1}, hours=4, deadline=0)
+    with pytest.raises(ValueError, match="deadline"):
+        Task("X", requirements={"VSG": 1}, hours=4, deadline=HORIZON + 1)
+
+
+def test_format_deadline():
+    from lab_planner.models import format_deadline
+    assert format_deadline(None) == "-"
+    assert format_deadline(168) == "end of week"
+    assert format_deadline(42) == "Tue 18:00"
+    assert format_deadline(24) == "end of Mon"
+    assert format_deadline(1) == "Mon 01:00"
+
+
 def test_next_copy_name_progression():
     assert next_copy_name("Foo") == "Foo (copy)"
     assert next_copy_name("Foo (copy)") == "Foo (copy 2)"
