@@ -62,7 +62,21 @@
       "preferred_slots": [],
       "unavailable_slots": [],
       "work_hours_only": true,
+      "continue_next_day": false,
       "deadline": 42
+    },
+    {
+      "name": "Long firmware bake",
+      "requirements": {
+        "CT94": 1,
+        "AA": 1
+      },
+      "hours": 18,
+      "preferred_slots": [],
+      "unavailable_slots": [],
+      "work_hours_only": true,
+      "continue_next_day": true,
+      "deadline": null
     },
     {
       "name": "IFF/IFR cross-check",
@@ -75,27 +89,27 @@
       "preferred_slots": [],
       "unavailable_slots": [],
       "work_hours_only": true,
+      "continue_next_day": false,
       "deadline": 66
     },
     {
       "name": "Comm bench",
       "requirements": {
         "RFCU": 2,
-        "CT94": 1,
         "1553": 1
       },
       "hours": 5,
       "preferred_slots": [],
       "unavailable_slots": [],
       "work_hours_only": true,
+      "continue_next_day": false,
       "deadline": null
     },
     {
       "name": "EW signal sweep",
       "requirements": {
         "VSGRS": 1,
-        "VSG": 1,
-        "AA": 1
+        "VSG": 1
       },
       "hours": 6,
       "preferred_slots": [
@@ -111,6 +125,7 @@
       ],
       "unavailable_slots": [],
       "work_hours_only": false,
+      "continue_next_day": false,
       "deadline": null
     },
     {
@@ -148,18 +163,7 @@
       ],
       "unavailable_slots": [],
       "work_hours_only": true,
-      "deadline": null
-    },
-    {
-      "name": "Power & telemetry",
-      "requirements": {
-        "AA": 2,
-        "OBB": 1
-      },
-      "hours": 3,
-      "preferred_slots": [],
-      "unavailable_slots": [],
-      "work_hours_only": false,
+      "continue_next_day": false,
       "deadline": null
     },
     {
@@ -171,6 +175,7 @@
       "preferred_slots": [],
       "unavailable_slots": [],
       "work_hours_only": false,
+      "continue_next_day": false,
       "deadline": null
     }
   ]

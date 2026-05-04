@@ -45,8 +45,9 @@ class Task:
     hours: int = 1
     preferred_slots: set[int] = field(default_factory=set)
     unavailable_slots: set[int] = field(default_factory=set)
-    work_hours_only: bool = False  # if True, must run inside Mon-Fri 08-18
-    deadline: Optional[int] = None  # task must finish (end_slot) at or before this slot (1..168)
+    work_hours_only: bool = False    # restrict to Mon-Fri 08-18
+    continue_next_day: bool = False  # work_hours_only tasks may span work-days
+    deadline: Optional[int] = None   # task must finish at or before this slot (1..168)
 
     def __post_init__(self) -> None:
         if not self.name:
@@ -147,6 +148,15 @@ def is_weekend(slot: int) -> bool:
 def non_work_slots() -> set[int]:
     """All 168 - (5×10) = 118 slots that fall outside work hours."""
     return {s for s in range(HORIZON) if not is_work_hour(s)}
+
+
+def work_hour_slots() -> list[int]:
+    """The 50 work-hour slots in the week, in chronological order."""
+    return [s for s in range(HORIZON) if is_work_hour(s)]
+
+
+WORK_HOURS_PER_DAY = WORK_END_HOUR - WORK_START_HOUR  # = 10
+WORK_HOURS_PER_WEEK = WORK_HOURS_PER_DAY * len(WORKDAYS)  # = 50
 
 
 def day_hour_to_slot(day: int, hour: int) -> int:

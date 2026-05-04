@@ -36,6 +36,12 @@ chart in a tkinter GUI.
   restricts the task to Mon-Fri 08-18 — a hard constraint enforced by
   the solver. Off-hours-friendly tasks (e.g. ovens, long bake-outs)
   leave it off so they can run overnight or on weekends.
+- **Continue on next day.** A second checkbox (only available when
+  *Work hours only* is on) lets a long task pause overnight at the
+  end of one work-day window and resume at the start of the next.
+  Equipment is released during the overnight gap and reclaimed in the
+  morning. Useful for any work that exceeds a single 10-hour
+  Mon-Fri 08-18 window.
 - **Optimisation objective**
   `10000·makespan + 100·preferred_misses + 1·priority_weighted_starts`,
   in lexicographic order:

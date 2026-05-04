@@ -250,6 +250,14 @@ class TaskEditorFrame(tk.Frame):
         )
         self.work_only_chk.pack(side="left")
 
+        self.continue_var = tk.BooleanVar(value=False)
+        self.continue_chk = tk.Checkbutton(
+            top, text="Continue on next day",
+            variable=self.continue_var,
+            command=self._on_continue_changed,
+        )
+        self.continue_chk.pack(side="left", padx=(8, 0))
+
         # Deadline row
         dl_row = tk.Frame(self)
         dl_row.pack(fill="x", padx=8, pady=(0, 4))
@@ -324,6 +332,7 @@ class TaskEditorFrame(tk.Frame):
             self.name_var.set("")
             self.hours_var.set(1)
             self.work_only_var.set(False)
+            self.continue_var.set(False)
             self.deadline_on_var.set(False)
             self.deadline_day_var.set(DAY_NAMES[0])
             self.deadline_hour_var.set(18)
@@ -336,6 +345,8 @@ class TaskEditorFrame(tk.Frame):
         self.name_var.set(task.name)
         self.hours_var.set(task.hours)
         self.work_only_var.set(task.work_hours_only)
+        self.continue_var.set(task.continue_next_day)
+        self._update_continue_widget_state()
         self._load_deadline(task)
         self._refresh_requirements()
         self.slot_grid.load_from_task(task)
@@ -384,7 +395,23 @@ class TaskEditorFrame(tk.Frame):
         if self._building or self._task is None:
             return
         self._task.work_hours_only = bool(self.work_only_var.get())
+        # `continue_next_day` is only meaningful with `work_hours_only`.
+        if not self._task.work_hours_only and self._task.continue_next_day:
+            self._task.continue_next_day = False
+            self.continue_var.set(False)
+        self._update_continue_widget_state()
         self._on_dirty()
+
+    def _on_continue_changed(self):
+        if self._building or self._task is None:
+            return
+        self._task.continue_next_day = bool(self.continue_var.get())
+        self._on_dirty()
+
+    def _update_continue_widget_state(self):
+        # Enable the checkbox only when work_hours_only is on AND a task is loaded.
+        on = self._task is not None and self.work_only_var.get()
+        self.continue_chk.config(state="normal" if on else "disabled")
 
     # --- deadline ---
 
@@ -513,3 +540,4 @@ class TaskEditorFrame(tk.Frame):
         self.work_only_chk.config(state=state)
         self.deadline_chk.config(state=state)
         self._update_deadline_widgets_state()
+        self._update_continue_widget_state()

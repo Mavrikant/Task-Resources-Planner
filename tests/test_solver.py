@@ -158,6 +158,51 @@ def test_priority_pulls_first_task_earlier():
     )
 
 
+def test_continue_next_day_spans_workdays():
+    """A 15h work-hours-only + continue_next_day task fits Mon 8-18 + Tue 8-13.
+    The chunks must all land on work-hour slots (no overnight occupation)."""
+    from lab_planner.models import is_work_hour
+    tasks = [Task("LongRun", requirements={"VSG": 1}, hours=15,
+                  work_hours_only=True, continue_next_day=True)]
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=10)
+    assert res.feasible
+    # All occupied slots must be work hours
+    occupied = []
+    for a in res.assignments:
+        for s in range(a.start_slot, a.end_slot):
+            occupied.append(s)
+    assert len(occupied) == 15
+    for s in occupied:
+        assert is_work_hour(s), f"slot {s} is outside work hours"
+    # The 15 occupied work hours should be contiguous in work-hour-index space.
+    from lab_planner.models import work_hour_slots
+    whs = work_hour_slots()
+    indices = sorted(whs.index(s) for s in occupied)
+    assert indices == list(range(indices[0], indices[0] + 15))
+
+
+def test_continue_next_day_assignments_coalesce_per_day():
+    """A 15h split task should be reported as 2 assignment rows per unit:
+    one for Mon's 10 hours, one for Tue's 5 hours."""
+    tasks = [Task("LongRun", requirements={"OBB": 1}, hours=15,
+                  work_hours_only=True, continue_next_day=True)]
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=10)
+    assert res.feasible
+    obb = [a for a in res.assignments if a.resource_name == "OBB"]
+    # Two non-overlapping runs, total 15 hours.
+    assert len(obb) == 2
+    assert sum(a.duration for a in obb) == 15
+
+
+def test_continue_next_day_without_flag_makes_long_task_infeasible():
+    """A 15h work-hours-only task WITHOUT continue_next_day cannot fit
+    in any single 10-hour work-day window."""
+    tasks = [Task("LongRun", requirements={"VSG": 1}, hours=15,
+                  work_hours_only=True, continue_next_day=False)]
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=5)
+    assert not res.feasible
+
+
 def test_three_tasks_share_resources_correctly():
     """Three short tasks each need VSG (3 units) and OBB (1 unit).
     OBB serializes them; VSG can run in parallel."""
