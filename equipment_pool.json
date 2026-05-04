@@ -1,0 +1,18 @@
+{
+  "schema": "equipment-pool",
+  "version": 1,
+  "resources": [
+    { "name": "VSG",   "units": 3 },
+    { "name": "VSGRS", "units": 1 },
+    { "name": "OBB",   "units": 1 },
+    { "name": "IFF",   "units": 2 },
+    { "name": "IFR",   "units": 1 },
+    { "name": "1553",  "units": 2 },
+    { "name": "RFCU",  "units": 2 },
+    { "name": "ADF T", "units": 1 },
+    { "name": "Fırın", "units": 2 },
+    { "name": "CT94",  "units": 1 },
+    { "name": "OSC",   "units": 1 },
+    { "name": "AA",    "units": 2 }
+  ]
+}

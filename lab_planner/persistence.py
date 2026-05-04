@@ -1,13 +1,18 @@
-"""JSON save/load for projects (tasks + resources)."""
+"""JSON save/load for projects and equipment pools."""
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
-from .models import Resource, Task
+from .models import DEFAULT_RESOURCES, Resource, Task
 
 
 SCHEMA_VERSION = 2
+POOL_SCHEMA_VERSION = 1
+POOL_SCHEMA_NAME = "equipment-pool"
+
+# Where the bundled default pool lives (project-root / equipment_pool.json).
+DEFAULT_POOL_PATH = Path(__file__).resolve().parent.parent / "equipment_pool.json"
 
 
 def save_project(path: str | Path,
@@ -54,3 +59,42 @@ def load_project(path: str | Path) -> tuple[list[Task], list[Resource]]:
             work_hours_only=bool(t.get("work_hours_only", False)),
         ))
     return tasks, resources
+
+
+# --- Equipment pool save / load --------------------------------------------
+
+def save_pool(path: str | Path, resources: list[Resource]) -> None:
+    """Write a list of resources to a standalone equipment-pool JSON file."""
+    payload = {
+        "schema": POOL_SCHEMA_NAME,
+        "version": POOL_SCHEMA_VERSION,
+        "resources": [{"name": r.name, "units": r.units} for r in resources],
+    }
+    Path(path).write_text(json.dumps(payload, ensure_ascii=False, indent=2),
+                          encoding="utf-8")
+
+
+def load_pool(path: str | Path) -> list[Resource]:
+    """Read a standalone equipment-pool JSON file."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if data.get("schema") != POOL_SCHEMA_NAME:
+        raise ValueError(
+            f"Not an equipment-pool file: schema={data.get('schema')!r}"
+        )
+    if data.get("version") != POOL_SCHEMA_VERSION:
+        raise ValueError(
+            f"Unsupported equipment-pool schema version "
+            f"{data.get('version')!r}; expected {POOL_SCHEMA_VERSION}."
+        )
+    return [Resource(name=r["name"], units=int(r["units"]))
+            for r in data.get("resources", [])]
+
+
+def load_default_pool() -> list[Resource]:
+    """Return the pool from `DEFAULT_POOL_PATH` if present, else the hardcoded fallback."""
+    if DEFAULT_POOL_PATH.exists():
+        try:
+            return load_pool(DEFAULT_POOL_PATH)
+        except (ValueError, json.JSONDecodeError, OSError):
+            pass
+    return list(DEFAULT_RESOURCES)

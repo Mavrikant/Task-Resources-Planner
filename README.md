@@ -12,9 +12,13 @@ chart in a tkinter GUI.
   requirements at once** (e.g. *2× VSG + 1× OBB + 1× OSC*) and locks
   every required physical unit together for its duration.
 - **One-week horizon** — 7 days × 24 one-hour slots = 168 slots.
-- **Resource pool** — VSG×3, VSGRS×1, OBB×1, IFF×2, IFR×1, 1553×2,
+- **Equipment pool** — defined in `equipment_pool.json` at the project
+  root (loaded on startup, fallback to a hardcoded list if missing).
+  Default pool is VSG×3, VSGRS×1, OBB×1, IFF×2, IFR×1, 1553×2,
   RFCU×2, ADF T×1, Fırın×2, CT94×1, OSC×1, AA×2 (19 physical units).
-  Counts can be edited per project.
+  The Resources tab supports **Add / Edit / Delete** for individual
+  equipment types and **Import pool / Export pool** to load or save
+  whole pool files independently of project files.
 - **Per-task slot grid.** A 7×24 click-to-cycle grid marks
   **preferred** (green) and **unavailable** (red) hours for the task.
   The grid background already shades **work hours** (Mon-Fri 08-18),
@@ -50,7 +54,11 @@ to `OPTIMAL` in well under a second.
 
 ## How to use
 
-1. **Resources tab** — review or edit the unit count for each resource type.
+1. **Resources tab** — view the equipment pool. Click **Add…** to
+   register a new equipment type, **Edit…** to rename or change the
+   unit count, **Delete** to remove a type that no task uses, or
+   **Import pool…** / **Export pool…** to load and save standalone
+   equipment-pool JSON files.
 2. **Tasks tab**
    - Click **Add task** to create a task. The new task starts with one
      unit of the first resource for one hour.

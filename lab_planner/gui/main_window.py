@@ -9,20 +9,69 @@ from typing import Optional
 
 from .. import APP_NAME, __version__
 from ..models import (
-    DEFAULT_RESOURCES,
     Resource,
     ScheduleResult,
     Task,
     duplicate_task,
     format_requirements,
 )
-from ..persistence import load_project, save_project
+from ..persistence import (
+    load_default_pool,
+    load_pool,
+    load_project,
+    save_pool,
+    save_project,
+)
 from ..solver import build_and_solve
 from .gantt_view import GanttFrame
 from .task_editor import TaskEditorFrame
 
 
 # --- Resources tab ---------------------------------------------------------
+
+class EquipmentDialog(simpledialog.Dialog):
+    """Modal dialog to add or edit a resource type (name + units)."""
+
+    def __init__(self, parent,
+                 current: Optional[Resource] = None,
+                 forbidden_names: Optional[set[str]] = None,
+                 title: str = "Equipment"):
+        self.current = current
+        self.forbidden = forbidden_names or set()
+        self.result: Optional[Resource] = None
+        super().__init__(parent, title=title)
+
+    def body(self, master):
+        tk.Label(master, text="Name:").grid(row=0, column=0, sticky="e",
+                                             padx=4, pady=4)
+        self.name_var = tk.StringVar(value=self.current.name if self.current else "")
+        self.name_entry = tk.Entry(master, textvariable=self.name_var, width=18)
+        self.name_entry.grid(row=0, column=1, sticky="w", padx=4, pady=4)
+
+        tk.Label(master, text="Units:").grid(row=1, column=0, sticky="e",
+                                              padx=4, pady=4)
+        self.units_var = tk.IntVar(value=self.current.units if self.current else 1)
+        tk.Spinbox(master, from_=1, to=99, textvariable=self.units_var,
+                   width=6).grid(row=1, column=1, sticky="w", padx=4, pady=4)
+        return self.name_entry
+
+    def apply(self):
+        name = self.name_var.get().strip()
+        if not name:
+            messagebox.showerror("Invalid name", "Name cannot be empty.")
+            self.result = None
+            return
+        if name in self.forbidden:
+            messagebox.showerror("Duplicate name",
+                                  f"An equipment named {name!r} already exists.")
+            self.result = None
+            return
+        try:
+            self.result = Resource(name, int(self.units_var.get()))
+        except ValueError as e:
+            messagebox.showerror("Invalid value", str(e))
+            self.result = None
+
 
 class ResourcesFrame(tk.Frame):
     def __init__(self, master, app: "App"):
@@ -33,8 +82,15 @@ class ResourcesFrame(tk.Frame):
         toolbar.pack(fill="x", padx=8, pady=8)
         tk.Label(toolbar, text="Equipment pool",
                  font=("TkDefaultFont", 11, "bold")).pack(side="left")
-        tk.Button(toolbar, text="Edit unit count…",
-                  command=self._edit).pack(side="right")
+
+        right_btns = tk.Frame(toolbar)
+        right_btns.pack(side="right")
+        tk.Button(right_btns, text="Add…",     command=self._add).pack(side="left", padx=2)
+        tk.Button(right_btns, text="Edit…",    command=self._edit).pack(side="left", padx=2)
+        tk.Button(right_btns, text="Delete",   command=self._delete).pack(side="left", padx=2)
+        tk.Frame(right_btns, width=14).pack(side="left")
+        tk.Button(right_btns, text="Import pool…", command=self._import_pool).pack(side="left", padx=2)
+        tk.Button(right_btns, text="Export pool…", command=self._export_pool).pack(side="left", padx=2)
 
         cols = ("name", "units")
         self.tree = ttk.Treeview(self, columns=cols, show="headings", height=15)
@@ -45,6 +101,11 @@ class ResourcesFrame(tk.Frame):
         self.tree.pack(fill="both", expand=True, padx=8, pady=(0, 8))
         self.tree.bind("<Double-1>", lambda e: self._edit())
 
+        hint = tk.Label(self, fg="#666", anchor="w",
+                        text=("Equipment pool defines all available equipment types and their "
+                              "unit counts. Pools can be loaded/saved separately from projects."))
+        hint.pack(fill="x", padx=8, pady=(0, 8))
+
         self.refresh()
 
     def refresh(self):
@@ -52,25 +113,105 @@ class ResourcesFrame(tk.Frame):
         for r in self.app.resources:
             self.tree.insert("", "end", values=(r.name, r.units))
 
-    def _edit(self):
+    def _selected_index(self) -> Optional[int]:
         sel = self.tree.selection()
         if not sel:
+            return None
+        return self.tree.index(sel[0])
+
+    def _add(self):
+        forbidden = {r.name for r in self.app.resources}
+        dlg = EquipmentDialog(self, forbidden_names=forbidden,
+                                title="Add equipment")
+        if dlg.result is None:
             return
-        idx = self.tree.index(sel[0])
-        r = self.app.resources[idx]
-        new_count = simpledialog.askinteger(
-            "Edit unit count", f"Number of units for {r.name!r}:",
-            initialvalue=r.units, minvalue=1, maxvalue=99, parent=self,
-        )
-        if new_count is None:
-            return
-        try:
-            self.app.resources[idx] = Resource(r.name, new_count)
-        except ValueError as e:
-            messagebox.showerror("Invalid value", str(e))
-            return
+        self.app.resources.append(dlg.result)
         self.refresh()
         self.app.mark_dirty()
+
+    def _edit(self):
+        idx = self._selected_index()
+        if idx is None:
+            return
+        r = self.app.resources[idx]
+        forbidden = {x.name for x in self.app.resources} - {r.name}
+        dlg = EquipmentDialog(self, current=r, forbidden_names=forbidden,
+                                title="Edit equipment")
+        if dlg.result is None:
+            return
+        # If the name changed, update every task that referred to the old name.
+        if dlg.result.name != r.name:
+            for t in self.app.tasks:
+                if r.name in t.requirements:
+                    t.requirements[dlg.result.name] = t.requirements.pop(r.name)
+        self.app.resources[idx] = dlg.result
+        self.refresh()
+        self.app.tasks_tab.refresh()
+        self.app.mark_dirty()
+
+    def _delete(self):
+        idx = self._selected_index()
+        if idx is None:
+            return
+        r = self.app.resources[idx]
+        in_use_by = [t.name for t in self.app.tasks if r.name in t.requirements]
+        if in_use_by:
+            messagebox.showerror(
+                "Cannot delete",
+                f"{r.name!r} is required by: " + ", ".join(in_use_by[:5])
+                + (" …" if len(in_use_by) > 5 else "")
+                + "\n\nRemove it from those tasks first.",
+            )
+            return
+        if not messagebox.askyesno("Delete equipment",
+                                    f"Delete equipment type {r.name!r}?"):
+            return
+        del self.app.resources[idx]
+        self.refresh()
+        self.app.mark_dirty()
+
+    def _import_pool(self):
+        path = filedialog.askopenfilename(
+            title="Import equipment pool",
+            filetypes=[("Equipment-pool JSON", "*.json"), ("All files", "*.*")],
+        )
+        if not path:
+            return
+        try:
+            pool = load_pool(path)
+        except Exception as e:
+            messagebox.showerror("Could not import pool", str(e))
+            return
+        # Warn if any current task would be orphaned.
+        new_names = {r.name for r in pool}
+        orphans = [(t.name, missing) for t in self.app.tasks
+                   for missing in t.requirements
+                   if missing not in new_names]
+        if orphans:
+            lines = [f"  • {tn}: needs {res}" for tn, res in orphans[:8]]
+            if not messagebox.askyesno(
+                "Tasks reference missing equipment",
+                "Some tasks reference equipment not in the imported pool:\n\n"
+                + "\n".join(lines)
+                + ("\n  …" if len(orphans) > 8 else "")
+                + "\n\nImport anyway? (Solver will report INVALID until you fix the tasks.)"):
+                return
+        self.app.resources = pool
+        self.refresh()
+        self.app.mark_dirty()
+
+    def _export_pool(self):
+        path = filedialog.asksaveasfilename(
+            title="Export equipment pool",
+            defaultextension=".json",
+            filetypes=[("Equipment-pool JSON", "*.json")],
+        )
+        if not path:
+            return
+        try:
+            save_pool(path, self.app.resources)
+        except Exception as e:
+            messagebox.showerror("Could not export pool", str(e))
 
 
 # --- Tasks tab -------------------------------------------------------------
@@ -249,7 +390,7 @@ class App(tk.Tk):
         self.minsize(1100, 720)
 
         self.tasks: list[Task] = []
-        self.resources: list[Resource] = list(DEFAULT_RESOURCES)
+        self.resources: list[Resource] = load_default_pool()
         self.current_file: Optional[Path] = None
         self.last_result: Optional[ScheduleResult] = None
         self._dirty = False
@@ -309,7 +450,7 @@ class App(tk.Tk):
         if not self._confirm_discard():
             return
         self.tasks = []
-        self.resources = list(DEFAULT_RESOURCES)
+        self.resources = load_default_pool()
         self.current_file = None
         self.last_result = None
         self._dirty = False
