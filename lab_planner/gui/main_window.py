@@ -28,6 +28,16 @@ from ..solver import build_and_solve
 from .gantt_view import GanttFrame
 from .task_editor import TaskEditorFrame
 
+# Platform-correct modifier for app-level shortcuts.
+# - Tk bind syntax uses "Command" on macOS, "Control" elsewhere.
+# - Menu accelerator strings use "Cmd" / "Ctrl".
+if sys.platform == "darwin":
+    _MOD_KEY = "Command"
+    _MOD_LABEL = "Cmd"
+else:
+    _MOD_KEY = "Control"
+    _MOD_LABEL = "Ctrl"
+
 
 # --- Resources tab ---------------------------------------------------------
 
@@ -480,17 +490,47 @@ class App(tk.Tk):
         menu = tk.Menu(self)
         self.config(menu=menu)
         filemenu = tk.Menu(menu, tearoff=0)
-        filemenu.add_command(label="New project",  command=self.new_project)
-        filemenu.add_command(label="Open…",         command=self.open_project)
-        filemenu.add_command(label="Save",          command=self.save_project)
-        filemenu.add_command(label="Save as…",      command=self.save_as_project)
+        filemenu.add_command(label="New project",
+                              accelerator=f"{_MOD_LABEL}+N",
+                              command=self.new_project)
+        filemenu.add_command(label="Open…",
+                              accelerator=f"{_MOD_LABEL}+O",
+                              command=self.open_project)
+        filemenu.add_command(label="Save",
+                              accelerator=f"{_MOD_LABEL}+S",
+                              command=self.save_project)
+        filemenu.add_command(label="Save as…",
+                              accelerator=f"{_MOD_LABEL}+Shift+S",
+                              command=self.save_as_project)
         filemenu.add_separator()
-        filemenu.add_command(label="Quit",          command=self._on_quit)
+        filemenu.add_command(label="Solve schedule",
+                              accelerator=f"{_MOD_LABEL}+R",
+                              command=self.run_solver)
+        # On macOS, Tk auto-installs Cmd+Q on the Apple menu; only add an
+        # in-menu Quit shortcut on Linux/Windows.
+        if sys.platform != "darwin":
+            filemenu.add_separator()
+            filemenu.add_command(label="Quit",
+                                  accelerator="Ctrl+Q",
+                                  command=self._on_quit)
         menu.add_cascade(label="File", menu=filemenu)
 
         helpmenu = tk.Menu(menu, tearoff=0)
         helpmenu.add_command(label="About…", command=self._show_about)
         menu.add_cascade(label="Help", menu=helpmenu)
+
+        # Global keyboard shortcuts. bind_all so they fire regardless of
+        # which child widget has focus. The lambda swallows the event arg
+        # and returns "break" to stop further propagation.
+        def _bind(key, fn):
+            self.bind_all(f"<{_MOD_KEY}-{key}>", lambda _e: (fn(), "break")[1])
+        _bind("n", self.new_project)
+        _bind("o", self.open_project)
+        _bind("s", self.save_project)
+        _bind("S", self.save_as_project)
+        _bind("r", self.run_solver)
+        if sys.platform != "darwin":
+            _bind("q", self._on_quit)
 
         self.protocol("WM_DELETE_WINDOW", self._on_quit)
 
