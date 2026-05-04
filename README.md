@@ -2,29 +2,28 @@
 
 A desktop tool that builds a tight one-week schedule for shared lab
 equipment. The constraint-programming engine (Google OR-Tools CP-SAT)
-minimises the schedule's total span, packs each team's work tightly,
-respects per-team unavailable hours, and prefers each team's
-self-declared favourite hours. The result is shown as a Gantt chart in
-a tkinter GUI.
+minimises total span, respects per-task unavailable hours, and prefers
+slots each task marks as favourite. The result is shown as a Gantt
+chart in a tkinter GUI.
 
 ## Features
 
+- **Tasks are first-class.** Each task declares **multiple resource
+  requirements at once** (e.g. *2× VSG + 1× OBB + 1× OSC*) and locks
+  every required physical unit together for its duration.
 - **One-week horizon** — 7 days × 24 one-hour slots = 168 slots.
 - **Resource pool** — VSG×3, VSGRS×1, OBB×1, IFF×2, IFR×1, 1553×2,
   RFCU×2, ADF T×1, Fırın×2, CT94×1, OSC×1, AA×2 (19 physical units).
   Counts can be edited per project.
-- **Per-team configuration**
-  - List of tasks (resource type + hours + *allow split* flag).
-  - 7×24 click-grid for **preferred** (green) and **unavailable** (red) hours.
+- **Per-task slot grid.** A 7×24 click-to-cycle grid marks
+  **preferred** (green) and **unavailable** (red) hours for the task.
 - **Optimisation objective**
-  `100·makespan + 5·gap_penalty − 1·preferred_hits`, so:
+  `100·makespan − 1·preferred_hits`, so:
   1. The schedule is as short as possible.
-  2. Each team's tasks are packed tightly (small gaps between them).
-  3. Tasks drift toward green hours when there is slack.
-- **Hard constraints** — unavailable hours, per-unit no-overlap,
-  per-team no-overlap (a team can only run one task at a time),
-  optional task contiguity per task.
-- **Save / load** projects as UTF-8 JSON.
+  2. Tasks drift toward green hours when there is slack.
+- **Hard constraints** — unavailable hours, per-unit no-overlap (a
+  single physical unit serves one task at a time), task contiguity.
+- **Save / load** projects as UTF-8 JSON (schema v2).
 
 ## Requirements
 
@@ -39,26 +38,29 @@ python main.py
 ```
 
 A pre-built sample is included — open **File → Open…** and pick
-`sample_project.json` to see five teams with 16 tasks already wired up.
+`sample_project.json` to see seven tasks already wired up. It solves
+to `OPTIMAL` in well under a second.
 
 ## How to use
 
 1. **Resources tab** — review or edit the unit count for each resource type.
-2. **Teams tab**
-   - Click **Add team** to create a team.
-   - With a team selected on the left, edit its name, add/edit/delete its
-     tasks, and click cells in the 7×24 grid to mark them
-     *preferred* (green) or *unavailable* (red).
-     Right-click clears a cell.
-   - Each task has a checkbox **Allow split**. When ON the task can be
-     spread across the week one hour at a time; when OFF the task must
-     occupy contiguous hours on one physical unit.
-3. **Click Solve schedule** — solver runs in a background thread and
-   switches to the Schedule tab on success. On infeasibility you get a
-   diagnostic dialog (e.g. *"Team Foo task #2 needs 25 h on OBB but
-   only 20 h are available"*).
-4. **Schedule tab** — Gantt chart. Y-axis = physical unit. X-axis = hour
-   of the week with day separators. Pan/zoom with the matplotlib toolbar.
+2. **Tasks tab**
+   - Click **Add task** to create a task. The new task starts with one
+     unit of the first resource for one hour.
+   - Select a task on the left and use the right pane to edit its
+     name, hours, required-resources table (Add / Edit / Delete rows),
+     and the 7×24 slot grid.
+     Left-click in the grid cycles **None → Preferred (green) → Unavailable (red) → None**.
+     Right-click clears.
+   - The task list shows a one-line summary like
+     `Radar integration  |  VSG×2 + OBB + OSC  |  4`.
+3. **Click Solve schedule** — the solver runs in a background thread
+   and switches to the Schedule tab on success. On infeasibility you
+   get a diagnostic dialog (e.g. *"Task #2 needs 5× OBB but only 1
+   exists"*).
+4. **Schedule tab** — Gantt chart. Y-axis = physical unit. X-axis =
+   hour of the week with day separators. Pan/zoom with the matplotlib
+   toolbar.
 
 Use **File → Save** to write the project to JSON for later editing.
 
@@ -68,14 +70,14 @@ Use **File → Save** to write the project to JSON for later editing.
 lab_planner/
   models.py            data classes + the default resource pool
   solver.py            CP-SAT formulation
-  persistence.py       JSON save/load
+  persistence.py       JSON save/load (schema v2)
   gui/
-    main_window.py     App + Resources/Teams/Schedule tabs
-    team_editor.py     team detail pane + 7×24 SlotGridWidget
+    main_window.py     App + Resources/Tasks/Schedule tabs
+    task_editor.py     task detail pane + 7×24 SlotGridWidget
     gantt_view.py      matplotlib Gantt embedded in tkinter
 tests/                 unit tests for models, solver, persistence
 main.py                entry point
-sample_project.json    example with 5 teams, 16 tasks
+sample_project.json    example with 7 multi-resource tasks
 ```
 
 ## Run tests
@@ -84,23 +86,24 @@ sample_project.json    example with 5 teams, 16 tasks
 pytest -q
 ```
 
-The suite covers:
+The 25 tests cover:
 
-- model validation (slot range, resource pool, task hours);
-- solver correctness (no-overlap, unavailable hours, preferred-bias, infeasibility,
-  splittable tasks);
+- model validation (slot range, resource pool, task hours, requirement quantities);
+- solver correctness — single task, multi-unit (2× VSG), unit no-overlap,
+  unavailable-hour blocking, preferred-window pull, infeasibility,
+  unknown-resource and over-quantity diagnostics;
 - JSON round-trip including non-ASCII names (Türkçe characters).
 
 ## Tuning notes
 
 - Default solver budget is **20 seconds** with **8 search workers**.
-  Realistic instances (≤ 50 tasks) typically reach OPTIMAL in under a
-  second; longer-running solves return the best `FEASIBLE` solution
-  found so far.
+  Realistic instances (≤ 30 tasks) typically reach `OPTIMAL` in well
+  under a second; longer-running solves return the best `FEASIBLE`
+  solution found so far.
 - Total weekly capacity = 19 units × 168 h = **3192 unit-hours**. If
   aggregate demand exceeds about 80 % of that, expect tighter
-  schedules and longer solve times — relax unavailable hours or split
-  long tasks to stay under that ceiling.
+  schedules and longer solve times — relax unavailable hours or
+  reduce task hours.
 
 ## Licence
 
