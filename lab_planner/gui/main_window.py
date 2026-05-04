@@ -1,4 +1,4 @@
-"""Main application window with Resources / Teams / Schedule tabs."""
+"""Main application window with Resources / Tasks / Schedule tabs."""
 from __future__ import annotations
 
 import threading
@@ -7,11 +7,17 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 from typing import Optional
 
-from ..models import DEFAULT_RESOURCES, Resource, ScheduleResult, Team
+from ..models import (
+    DEFAULT_RESOURCES,
+    Resource,
+    ScheduleResult,
+    Task,
+    format_requirements,
+)
 from ..persistence import load_project, save_project
 from ..solver import build_and_solve
 from .gantt_view import GanttFrame
-from .team_editor import TeamEditorFrame
+from .task_editor import TaskEditorFrame
 
 
 # --- Resources tab ---------------------------------------------------------
@@ -65,34 +71,43 @@ class ResourcesFrame(tk.Frame):
         self.app.mark_dirty()
 
 
-# --- Teams tab -------------------------------------------------------------
+# --- Tasks tab -------------------------------------------------------------
 
-class TeamsFrame(tk.Frame):
+class TasksFrame(tk.Frame):
     def __init__(self, master, app: "App"):
         super().__init__(master)
         self.app = app
 
-        # left: team list
+        # left: task list
         left = tk.Frame(self)
         left.pack(side="left", fill="y", padx=8, pady=8)
-        tk.Label(left, text="Teams", font=("TkDefaultFont", 11, "bold")).pack(anchor="w")
-        self.team_list = tk.Listbox(left, exportselection=False, width=22, height=20)
-        self.team_list.pack(fill="y", expand=True)
-        self.team_list.bind("<<ListboxSelect>>", self._on_select)
+        tk.Label(left, text="Tasks", font=("TkDefaultFont", 11, "bold")).pack(anchor="w")
+        cols = ("name", "summary", "hours")
+        self.tree = ttk.Treeview(left, columns=cols, show="headings",
+                                  height=20, selectmode="browse")
+        self.tree.heading("name", text="Name")
+        self.tree.heading("summary", text="Resources")
+        self.tree.heading("hours", text="h")
+        self.tree.column("name", width=160, anchor="w")
+        self.tree.column("summary", width=240, anchor="w")
+        self.tree.column("hours", width=42, anchor="center")
+        self.tree.pack(fill="y", expand=True)
+        self.tree.bind("<<TreeviewSelect>>", self._on_select)
 
         btn_row = tk.Frame(left)
         btn_row.pack(fill="x", pady=4)
-        tk.Button(btn_row, text="Add team", command=self._add_team).pack(side="left")
-        tk.Button(btn_row, text="Delete", command=self._delete_team).pack(side="left", padx=4)
+        tk.Button(btn_row, text="Add task", command=self._add_task).pack(side="left")
+        tk.Button(btn_row, text="Delete", command=self._delete_task).pack(side="left", padx=4)
 
         # right: editor + solve button
         right = tk.Frame(self)
         right.pack(side="left", fill="both", expand=True, padx=8, pady=8)
 
-        self.editor = TeamEditorFrame(
+        self.editor = TaskEditorFrame(
             right,
             get_resources=lambda: self.app.resources,
             on_dirty=self.app.mark_dirty,
+            on_changed=self._refresh_selected_row,
         )
         self.editor.pack(fill="both", expand=True)
 
@@ -109,63 +124,86 @@ class TeamsFrame(tk.Frame):
         self.refresh()
 
     def refresh(self):
-        self.team_list.delete(0, "end")
-        for t in self.app.teams:
-            self.team_list.insert("end", t.name)
-        # Re-show currently selected team (or clear)
+        self.tree.delete(*self.tree.get_children())
+        for t in self.app.tasks:
+            self.tree.insert("", "end",
+                              values=(t.name,
+                                      format_requirements(t.requirements),
+                                      t.hours))
         sel_idx = self._current_index()
         if sel_idx is None:
-            self.editor.show_team(None)
+            self.editor.show_task(None)
         else:
-            self.editor.show_team(self.app.teams[sel_idx])
+            self.editor.show_task(self.app.tasks[sel_idx])
 
     def select(self, idx: int):
-        self.team_list.selection_clear(0, "end")
-        if 0 <= idx < len(self.app.teams):
-            self.team_list.selection_set(idx)
-            self.team_list.see(idx)
-            self.editor.show_team(self.app.teams[idx])
+        children = self.tree.get_children()
+        self.tree.selection_remove(self.tree.selection())
+        if 0 <= idx < len(children):
+            iid = children[idx]
+            self.tree.selection_set(iid)
+            self.tree.focus(iid)
+            self.tree.see(iid)
 
     # --- events ---
 
     def _on_select(self, _event):
         idx = self._current_index()
         if idx is None:
-            self.editor.show_team(None)
+            self.editor.show_task(None)
         else:
-            self.editor.show_team(self.app.teams[idx])
+            self.editor.show_task(self.app.tasks[idx])
 
-    def _add_team(self):
-        name = simpledialog.askstring("Add team", "Team name:", parent=self)
-        if not name:
-            return
-        try:
-            team = Team(name=name.strip())
-        except ValueError as e:
-            messagebox.showerror("Invalid name", str(e))
-            return
-        self.app.teams.append(team)
-        self.app.mark_dirty()
-        self.refresh()
-        self.select(len(self.app.teams) - 1)
-
-    def _delete_team(self):
+    def _refresh_selected_row(self):
+        """Rewrite just the selected task's row when the editor changes name/hours/req."""
         idx = self._current_index()
         if idx is None:
             return
-        team = self.app.teams[idx]
-        if not messagebox.askyesno("Delete team",
-                                    f"Delete team {team.name!r}?"):
+        children = self.tree.get_children()
+        if 0 <= idx < len(children):
+            t = self.app.tasks[idx]
+            self.tree.item(children[idx],
+                            values=(t.name,
+                                    format_requirements(t.requirements),
+                                    t.hours))
+
+    def _add_task(self):
+        if not self.app.resources:
+            messagebox.showerror("No resources",
+                                  "Add at least one resource first.")
             return
-        del self.app.teams[idx]
+        name = simpledialog.askstring("Add task", "Task name:", parent=self)
+        if not name:
+            return
+        first_res = self.app.resources[0].name
+        try:
+            task = Task(name=name.strip(),
+                         requirements={first_res: 1}, hours=1)
+        except ValueError as e:
+            messagebox.showerror("Invalid task", str(e))
+            return
+        self.app.tasks.append(task)
+        self.app.mark_dirty()
+        self.refresh()
+        self.select(len(self.app.tasks) - 1)
+
+    def _delete_task(self):
+        idx = self._current_index()
+        if idx is None:
+            return
+        task = self.app.tasks[idx]
+        if not messagebox.askyesno("Delete task",
+                                    f"Delete task {task.name!r}?"):
+            return
+        del self.app.tasks[idx]
         self.app.mark_dirty()
         self.refresh()
 
     def _current_index(self) -> Optional[int]:
-        sel = self.team_list.curselection()
+        sel = self.tree.selection()
         if not sel:
             return None
-        return int(sel[0])
+        return self.tree.index(sel[0])
 
 
 # --- Schedule tab ----------------------------------------------------------
@@ -179,7 +217,7 @@ class ScheduleFrame(tk.Frame):
 
     def show(self, result: ScheduleResult):
         if result.feasible:
-            self.gantt.show(result, self.app.teams, self.app.resources)
+            self.gantt.show(result, self.app.tasks, self.app.resources)
         else:
             self.gantt.show_message(
                 f"Infeasible: {result.status_name}\n{result.diagnostic}"
@@ -195,7 +233,7 @@ class App(tk.Tk):
         self.geometry("1280x820")
         self.minsize(1100, 720)
 
-        self.teams: list[Team] = []
+        self.tasks: list[Task] = []
         self.resources: list[Resource] = list(DEFAULT_RESOURCES)
         self.current_file: Optional[Path] = None
         self.last_result: Optional[ScheduleResult] = None
@@ -204,8 +242,6 @@ class App(tk.Tk):
         self._build_menu()
         self._build_tabs()
         self._update_title()
-
-    # --- menu / tabs ---
 
     def _build_menu(self):
         menu = tk.Menu(self)
@@ -226,20 +262,20 @@ class App(tk.Tk):
         self.notebook = nb
 
         self.resources_tab = ResourcesFrame(nb, self)
-        self.teams_tab = TeamsFrame(nb, self)
+        self.tasks_tab = TasksFrame(nb, self)
         self.schedule_tab = ScheduleFrame(nb, self)
 
         nb.add(self.resources_tab, text="Resources")
-        nb.add(self.teams_tab,     text="Teams")
+        nb.add(self.tasks_tab,     text="Tasks")
         nb.add(self.schedule_tab,  text="Schedule")
-        nb.select(self.teams_tab)
+        nb.select(self.tasks_tab)
 
     # --- file ops ---
 
     def new_project(self):
         if not self._confirm_discard():
             return
-        self.teams = []
+        self.tasks = []
         self.resources = list(DEFAULT_RESOURCES)
         self.current_file = None
         self.last_result = None
@@ -257,11 +293,11 @@ class App(tk.Tk):
         if not path:
             return
         try:
-            teams, resources = load_project(path)
+            tasks, resources = load_project(path)
         except Exception as e:
             messagebox.showerror("Could not open", str(e))
             return
-        self.teams = teams
+        self.tasks = tasks
         self.resources = resources
         self.current_file = Path(path)
         self.last_result = None
@@ -273,7 +309,7 @@ class App(tk.Tk):
             self.save_as_project()
             return
         try:
-            save_project(self.current_file, self.teams, self.resources)
+            save_project(self.current_file, self.tasks, self.resources)
         except Exception as e:
             messagebox.showerror("Could not save", str(e))
             return
@@ -312,24 +348,20 @@ class App(tk.Tk):
     # --- solver ---
 
     def run_solver(self):
-        if not self.teams:
+        if not self.tasks:
             messagebox.showwarning("Nothing to solve",
-                                    "Add at least one team with tasks first.")
-            return
-        if not any(t.tasks for t in self.teams):
-            messagebox.showwarning("Nothing to solve",
-                                    "No team has any tasks defined.")
+                                    "Add at least one task first.")
             return
 
-        self.teams_tab.status_var.set("Solving…")
-        self.teams_tab.solve_btn.config(state="disabled")
+        self.tasks_tab.status_var.set("Solving…")
+        self.tasks_tab.solve_btn.config(state="disabled")
         self.update_idletasks()
 
         result_holder: dict = {}
 
         def worker():
             result_holder["result"] = build_and_solve(
-                self.teams, self.resources, time_limit_s=20,
+                self.tasks, self.resources, time_limit_s=20,
             )
 
         thread = threading.Thread(target=worker, daemon=True)
@@ -339,18 +371,18 @@ class App(tk.Tk):
             if thread.is_alive():
                 self.after(100, poll)
                 return
-            self.teams_tab.solve_btn.config(state="normal")
+            self.tasks_tab.solve_btn.config(state="normal")
             result: ScheduleResult = result_holder["result"]
             self.last_result = result
             if result.feasible:
-                self.teams_tab.status_var.set(
+                self.tasks_tab.status_var.set(
                     f"OK — makespan {result.makespan} h "
                     f"({result.solve_time_s:.2f} s)"
                 )
                 self.schedule_tab.show(result)
                 self.notebook.select(self.schedule_tab)
             else:
-                self.teams_tab.status_var.set(
+                self.tasks_tab.status_var.set(
                     f"{result.status_name}: {result.diagnostic}"
                 )
                 messagebox.showerror(
@@ -368,7 +400,7 @@ class App(tk.Tk):
 
     def _refresh_all(self):
         self.resources_tab.refresh()
-        self.teams_tab.refresh()
+        self.tasks_tab.refresh()
         self._update_title()
 
     def _update_title(self):

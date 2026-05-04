@@ -18,7 +18,7 @@ from ..models import (
     HOURS_PER_DAY,
     Resource,
     ScheduleResult,
-    Team,
+    Task,
     expand_units,
     unit_label,
 )
@@ -44,32 +44,36 @@ class GanttFrame(tk.Frame):
     # --- public ---
 
     def show(self, result: ScheduleResult,
-             teams: list[Team], resources: list[Resource]):
+             tasks: list[Task], resources: list[Resource]):
         self.ax.clear()
 
         units = expand_units(resources)
         n_units = len(units)
         labels = [unit_label(units, uid) for uid, _, _ in units]
 
-        team_names = [t.name for t in teams]
-        cmap = plt.get_cmap("tab20", max(len(team_names), 1))
-        colour = {name: cmap(i % cmap.N) for i, name in enumerate(team_names)}
+        task_names = [t.name for t in tasks]
+        # Use a 40-colour palette cycling tab20 + tab20b for many tasks.
+        cmap_a = plt.get_cmap("tab20")
+        cmap_b = plt.get_cmap("tab20b")
+        n = max(len(task_names), 1)
+        def _colour(i):
+            return cmap_a(i % 20) if (i // 20) % 2 == 0 else cmap_b(i % 20)
+        colour = {name: _colour(i) for i, name in enumerate(task_names)}
 
         for a in result.assignments:
             self.ax.broken_barh(
                 [(a.start_slot, a.duration)],
                 (a.unit_id - 0.4, 0.8),
-                facecolors=colour.get(a.team_name, "#888888"),
+                facecolors=colour.get(a.task_name, "#888888"),
                 edgecolors="black", linewidth=0.5,
             )
             if a.duration >= 2:
                 self.ax.text(
                     a.start_slot + a.duration / 2, a.unit_id,
-                    a.team_name, ha="center", va="center",
+                    a.task_name, ha="center", va="center",
                     fontsize=7, color="black",
                 )
 
-        # axes
         self.ax.set_yticks(range(n_units))
         self.ax.set_yticklabels(labels, fontsize=8)
         self.ax.set_ylim(-0.6, n_units - 0.4)
@@ -89,11 +93,11 @@ class GanttFrame(tk.Frame):
         self.ax.set_xlabel("Hour of week")
         self.ax.set_title("Lab equipment weekly schedule")
 
-        if team_names:
+        if task_names:
             handles = [Patch(facecolor=colour[n], edgecolor="black", label=n)
-                       for n in team_names]
+                       for n in task_names]
             self.ax.legend(handles=handles, loc="upper right",
-                           fontsize=8, ncol=min(4, len(team_names)))
+                           fontsize=7, ncol=min(4, len(task_names)))
 
         self.fig.tight_layout()
         self.canvas.draw()
@@ -102,7 +106,7 @@ class GanttFrame(tk.Frame):
             f"Status: {result.status_name}   "
             f"Makespan: {result.makespan} h   "
             f"Solve time: {result.solve_time_s:.2f} s   "
-            f"Tasks: {len(result.assignments)}"
+            f"Reservations: {len(result.assignments)}"
         )
 
     def show_message(self, msg: str):
