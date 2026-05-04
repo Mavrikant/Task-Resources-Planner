@@ -25,4 +25,5 @@ htmlcov/
 Thumbs.db
 
 my_project*.json
+plan.json
 gantt_preview.png
