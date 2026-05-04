@@ -1,10 +1,16 @@
 # Task-Resources Planner
 
+[![tests](https://github.com/serdar-karaman/Lab-Plan-OR/actions/workflows/tests.yml/badge.svg)](https://github.com/serdar-karaman/Lab-Plan-OR/actions/workflows/tests.yml)
+[![python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
+[![licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
+
 A desktop tool that builds a tight one-week schedule for shared lab
 equipment. The constraint-programming engine (Google OR-Tools CP-SAT)
-minimises total span, respects per-task unavailable hours, and prefers
-slots each task marks as favourite. The result is shown as a Gantt
-chart in a tkinter GUI.
+minimises total span, respects per-task unavailable hours and deadlines,
+and prefers the slots each task marks as favourite. The result is shown
+as a Gantt chart in a tkinter GUI.
+
+![Sample schedule rendered as Gantt](docs/screenshot.png)
 
 ## Features
 
@@ -13,50 +19,39 @@ chart in a tkinter GUI.
   every required physical unit together for its duration.
 - **Priority by list order.** The Tasks tab is a draggable priority
   list — the row at the top has the highest priority and is pulled
-  toward earlier starts when otherwise tied with another task. Drag
-  rows up or down to reorder.
-- **Deadlines.** Each task can have an optional deadline — pick a
-  day-of-week and an hour-of-day; the task's end-slot must fall at or
-  before that point. Solver hard-fails (`INFEASIBLE`) if no schedule
+  toward earlier starts when otherwise tied with another task.
+- **Deadlines.** Each task can have an optional deadline (day-of-week +
+  hour-of-day); the solver hard-fails (`INFEASIBLE`) if no schedule
   meets every deadline.
 - **One-week horizon** — 7 days × 24 one-hour slots = 168 slots.
-- **Equipment pool** — defined in `equipment_pool.json` at the project
-  root (loaded on startup, fallback to a hardcoded list if missing).
-  Default pool is VSG×3, VSGRS×1, OBB×1, IFF×2, IFR×1, 1553×2,
+- **Editable equipment pool.** Defined in `equipment_pool.json` at the
+  project root and editable from the Resources tab via **Add / Edit /
+  Delete** plus **Import pool / Export pool** for sharing pools across
+  projects. Default pool: VSG×3, VSGRS×1, OBB×1, IFF×2, IFR×1, 1553×2,
   RFCU×2, ADF T×1, Fırın×2, CT94×1, OSC×1, AA×2 (19 physical units).
-  The Resources tab supports **Add / Edit / Delete** for individual
-  equipment types and **Import pool / Export pool** to load or save
-  whole pool files independently of project files.
-- **Per-task slot grid.** A 7×24 click-to-cycle grid marks
-  **preferred** (green) and **unavailable** (red) hours for the task.
-  The grid background already shades **work hours** (Mon-Fri 08-18),
-  **off-hours** (light grey), and **weekends** (darker grey) so you
-  can see at a glance which slots are inside business time.
-- **Work hours only.** Each task has a checkbox that, when on,
-  restricts the task to Mon-Fri 08-18 — a hard constraint enforced by
-  the solver. Off-hours-friendly tasks (e.g. ovens, long bake-outs)
-  leave it off so they can run overnight or on weekends.
-- **Continue on next day.** A second checkbox (only available when
-  *Work hours only* is on) lets a long task pause overnight at the
-  end of one work-day window and resume at the start of the next.
-  Equipment is released during the overnight gap and reclaimed in the
-  morning. Useful for any work that exceeds a single 10-hour
-  Mon-Fri 08-18 window.
-- **Optimisation objective**
-  `10000·makespan + 100·preferred_misses + 1·priority_weighted_starts`,
-  in lexicographic order:
+- **Per-task slot grid.** A 7×24 click-and-drag grid: left-drag to mark
+  cells *unavailable* (red), right-drag to mark them *preferred*
+  (green), middle-drag to clear. The grid background shades **work
+  hours** (Mon-Fri 08-18), **off-hours** (light grey), and **weekends**
+  (darker grey) so you can see business-time at a glance.
+- **Work hours only.** A per-task hard constraint that restricts the
+  task to Mon-Fri 08-18.
+- **Continue on next day.** A companion flag that lets a long
+  work-hours-only task pause overnight at the end of one work-day
+  window and resume at the start of the next. Equipment is released
+  during the overnight gap and reclaimed in the morning. Useful for
+  any work that exceeds a single 10-hour window.
+- **Optimisation objective** (lexicographic, in this order):
   1. **Makespan** — the schedule is as short as possible.
   2. **Preferred slots** — tasks drift toward green hours when there is slack.
-  3. **Priority** — among otherwise tied solutions, tasks higher in
-     the list start earlier.
-- **Hard constraints** — unavailable hours, per-unit no-overlap (a
-  single physical unit serves one task at a time), task contiguity.
+  3. **Priority** — among otherwise tied solutions, tasks higher in the
+     list start earlier.
 - **Save / load** projects as UTF-8 JSON (schema v2).
 
 ## Requirements
 
-- Python 3.11 or newer (3.14 is what we test on).
-- The packages in `requirements.txt`: `ortools`, `matplotlib`, `pytest`.
+- Python 3.11 or newer (tested on 3.14).
+- Packages from `requirements.txt`: `ortools`, `matplotlib`, `pytest`.
 
 ## Quick start
 
@@ -66,35 +61,32 @@ python main.py
 ```
 
 A pre-built sample is included — open **File → Open…** and pick
-`sample_project.json` to see seven tasks already wired up. It solves
-to `OPTIMAL` in well under a second.
+`sample_project.json` to see seven tasks (including a long
+cross-day bake-out and several deadline-bound work-hours tasks)
+already wired up. It solves to `OPTIMAL` in well under a second.
 
 ## How to use
 
 1. **Resources tab** — view the equipment pool. Click **Add…** to
    register a new equipment type, **Edit…** to rename or change the
    unit count, **Delete** to remove a type that no task uses, or
-   **Import pool…** / **Export pool…** to load and save standalone
+   **Import pool… / Export pool…** to load and save standalone
    equipment-pool JSON files.
 2. **Tasks tab**
-   - Click **Add task** to create a task. The new task starts with one
-     unit of the first resource for one hour.
-   - Select a task on the left and use the right pane to edit its
-     name, hours, required-resources table (Add / Edit / Delete rows),
-     and the 7×24 slot grid.
-     Left-click in the grid cycles **None → Preferred (green) → Unavailable (red) → None**.
-     Right-click clears.
-   - The task list shows a one-line summary like
-     `Radar integration  |  VSG×2 + OBB + OSC  |  4`.
+   - **Add / Duplicate / Delete** for tasks; drag rows to reorder
+     (top = highest priority).
+   - For the selected task, edit name, hours, the *Work hours only*
+     and *Continue on next day* flags, the optional deadline, the
+     required-resources table (Add / Edit / Delete rows), and the
+     7×24 slot grid.
+   - The task list shows `# │ Name │ Resources │ h │ Deadline`.
 3. **Click Solve schedule** — the solver runs in a background thread
    and switches to the Schedule tab on success. On infeasibility you
    get a diagnostic dialog (e.g. *"Task #2 needs 5× OBB but only 1
    exists"*).
-4. **Schedule tab** — Gantt chart. Y-axis = physical unit. X-axis =
-   hour of the week with day separators. **Off-hours and weekend
-   columns are shaded in the background** so you can see at a glance
-   which bars run during business time. Pan/zoom with the matplotlib
-   toolbar.
+4. **Schedule tab** — Gantt chart with hour-of-day labels every six
+   hours, bold day separators, and shaded off-hour / weekend
+   backgrounds. Pan/zoom with the matplotlib toolbar.
 
 Use **File → Save** to write the project to JSON for later editing.
 
@@ -103,15 +95,19 @@ Use **File → Save** to write the project to JSON for later editing.
 ```
 lab_planner/
   models.py            data classes + the default resource pool
-  solver.py            CP-SAT formulation
-  persistence.py       JSON save/load (schema v2)
+  solver.py            CP-SAT formulation (contiguous + work-hours-split)
+  persistence.py       JSON save/load (project + equipment pool)
   gui/
     main_window.py     App + Resources/Tasks/Schedule tabs
     task_editor.py     task detail pane + 7×24 SlotGridWidget
     gantt_view.py      matplotlib Gantt embedded in tkinter
 tests/                 unit tests for models, solver, persistence
+tools/generate_icon.py one-time icon generator (Pillow)
+assets/                bundled icons
+docs/                  screenshots used in the README
 main.py                entry point
 sample_project.json    example with 7 multi-resource tasks
+equipment_pool.json    default 19-unit equipment pool
 ```
 
 ## Run tests
@@ -120,13 +116,16 @@ sample_project.json    example with 7 multi-resource tasks
 pytest -q
 ```
 
-The 25 tests cover:
+The 46 tests cover model validation, solver correctness (multi-unit
+allocation, unit & team no-overlap, unavailable-window blocking,
+preferred-window pulls, deadline enforcement, priority-ordering,
+work-hours-only, continue-on-next-day cross-day spanning,
+infeasibility diagnostics), and JSON round-trips for both project
+files and equipment-pool files.
 
-- model validation (slot range, resource pool, task hours, requirement quantities);
-- solver correctness — single task, multi-unit (2× VSG), unit no-overlap,
-  unavailable-hour blocking, preferred-window pull, infeasibility,
-  unknown-resource and over-quantity diagnostics;
-- JSON round-trip including non-ASCII names (Türkçe characters).
+CI is configured at [.github/workflows/tests.yml](.github/workflows/tests.yml)
+and runs the non-GUI tests on Linux + Windows × Python 3.11–3.13 on
+every push and pull request.
 
 ## Tuning notes
 
@@ -139,6 +138,11 @@ The 25 tests cover:
   schedules and longer solve times — relax unavailable hours or
   reduce task hours.
 
+## Versioning & changelog
+
+The project follows [Semantic Versioning](https://semver.org/).
+See [CHANGELOG.md](CHANGELOG.md) for release notes.
+
 ## Licence
 
-Private project — no licence applied.
+[MIT](LICENSE) — © 2026 M. Serdar Karaman.
