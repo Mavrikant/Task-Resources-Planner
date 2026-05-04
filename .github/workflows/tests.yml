@@ -30,7 +30,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run tests
+      - name: Run tests with coverage
         # The GUI tests don't run under headless CI; the solver/persistence
-        # tests are pure-Python and platform-independent.
-        run: pytest -q tests/test_models.py tests/test_solver.py tests/test_persistence.py
+        # tests are pure-Python and platform-independent. Coverage settings
+        # (source dirs, GUI omit) live in .coveragerc.
+        run: >
+          pytest -q
+          --cov --cov-report=xml --cov-report=term
+          tests/test_models.py tests/test_solver.py tests/test_persistence.py
+
+      - name: Upload coverage to Codecov
+        # One upload per commit is enough — pick a single matrix cell so the
+        # report isn't overwritten 12 times. Skip on PRs from forks (no token).
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}

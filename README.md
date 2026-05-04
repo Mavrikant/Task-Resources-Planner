@@ -1,6 +1,7 @@
 # Task-Resources Planner
 
 [![tests](https://github.com/Mavrikant/Task-Resources-Planner/actions/workflows/tests.yml/badge.svg)](https://github.com/Mavrikant/Task-Resources-Planner/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/Mavrikant/Task-Resources-Planner/branch/master/graph/badge.svg)](https://codecov.io/gh/Mavrikant/Task-Resources-Planner)
 [![python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
 [![licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 
