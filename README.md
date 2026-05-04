@@ -1,6 +1,6 @@
 # Task-Resources Planner
 
-[![tests](https://github.com/serdar-karaman/Lab-Plan-OR/actions/workflows/tests.yml/badge.svg)](https://github.com/serdar-karaman/Lab-Plan-OR/actions/workflows/tests.yml)
+[![tests](https://github.com/Mavrikant/Task-Resources-Planner/actions/workflows/tests.yml/badge.svg)](https://github.com/Mavrikant/Task-Resources-Planner/actions/workflows/tests.yml)
 [![python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
 [![licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 

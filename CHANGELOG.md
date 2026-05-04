@@ -53,5 +53,5 @@ adheres to [Semantic Versioning](https://semver.org/).
 - CP-SAT solver, JSON persistence, tkinter GUI with three tabs
   (Resources / Tasks / Schedule), matplotlib Gantt embedded in tk.
 
-[Unreleased]: https://github.com/<user>/<repo>/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/<user>/<repo>/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Mavrikant/Task-Resources-Planner/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Mavrikant/Task-Resources-Planner/releases/tag/v0.1.0
