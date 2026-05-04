@@ -49,8 +49,14 @@ class SlotGridWidget(tk.Frame):
         self._draw_chrome()
         self._draw_cells()
 
-        self.canvas.bind("<Button-1>", self._on_left_click)
-        self.canvas.bind("<Button-3>", self._on_right_click)
+        # Press-and-drag painting: left = unavailable, right = preferred,
+        # middle = clear. Same handler for press and motion events.
+        self.canvas.bind("<Button-1>",   self._paint_unavailable)
+        self.canvas.bind("<B1-Motion>",  self._paint_unavailable)
+        self.canvas.bind("<Button-3>",   self._paint_preferred)
+        self.canvas.bind("<B3-Motion>",  self._paint_preferred)
+        self.canvas.bind("<Button-2>",   self._paint_neutral)
+        self.canvas.bind("<B2-Motion>",  self._paint_neutral)
 
         legend = tk.Frame(self)
         legend.pack(anchor="w", pady=(4, 0))
@@ -63,7 +69,8 @@ class SlotGridWidget(tk.Frame):
                           highlightthickness=1, highlightbackground="#888")
             sw.pack(side="left", padx=(8, 2))
             tk.Label(legend, text=label).pack(side="left")
-        tk.Label(legend, text="   (left-click cycles, right-click clears)",
+        tk.Label(legend,
+                 text="   (drag with: left=unavailable  right=preferred  middle=clear)",
                  fg="#666").pack(side="left", padx=(20, 0))
 
     def _draw_chrome(self):
@@ -111,17 +118,20 @@ class SlotGridWidget(tk.Frame):
             return d * HOURS_PER_DAY + h
         return None
 
-    def _on_left_click(self, event):
-        slot = self._slot_at(event)
-        if slot is None:
-            return
-        self._set(slot, (self._states[slot] + 1) % 3)
+    def _paint_unavailable(self, event):
+        self._paint(event, self.UNAVAILABLE)
 
-    def _on_right_click(self, event):
+    def _paint_preferred(self, event):
+        self._paint(event, self.PREFERRED)
+
+    def _paint_neutral(self, event):
+        self._paint(event, self.NEUTRAL)
+
+    def _paint(self, event, state: int):
         slot = self._slot_at(event)
         if slot is None:
             return
-        self._set(slot, self.NEUTRAL)
+        self._set(slot, state)
 
     def _set(self, slot: int, state: int):
         if self._states[slot] == state:
