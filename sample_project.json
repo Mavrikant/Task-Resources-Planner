@@ -30,19 +30,19 @@
       "units": 2
     },
     {
-      "name": "ADF T",
+      "name": "ADF Tester",
       "units": 1
     },
     {
-      "name": "Fırın",
+      "name": "Temperature Test Chamber",
       "units": 2
     },
     {
-      "name": "CT94",
+      "name": "A429",
       "units": 1
     },
     {
-      "name": "OSC",
+      "name": "Oscilloscope",
       "units": 1
     },
     {
@@ -56,7 +56,7 @@
       "requirements": {
         "VSG": 2,
         "OBB": 1,
-        "OSC": 1
+        "Oscilloscope": 1
       },
       "hours": 4,
       "preferred_slots": [],
@@ -68,8 +68,8 @@
     {
       "name": "Long firmware bake",
       "requirements": {
-        "CT94": 1,
-        "AA": 1
+        "AA": 1,
+        "A429": 1
       },
       "hours": 18,
       "preferred_slots": [],
@@ -83,7 +83,7 @@
       "requirements": {
         "IFF": 2,
         "IFR": 1,
-        "ADF T": 1
+        "ADF Tester": 1
       },
       "hours": 3,
       "preferred_slots": [],
@@ -132,7 +132,7 @@
       "name": "1553 bus integration",
       "requirements": {
         "1553": 2,
-        "OSC": 1
+        "Oscilloscope": 1
       },
       "hours": 2,
       "preferred_slots": [
@@ -169,7 +169,7 @@
     {
       "name": "Bake out (oven, off-hours OK)",
       "requirements": {
-        "Fırın": 2
+        "Temperature Test Chamber": 2
       },
       "hours": 8,
       "preferred_slots": [],

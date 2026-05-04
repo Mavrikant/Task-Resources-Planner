@@ -435,7 +435,7 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(f"{APP_NAME} v{__version__}")
-        self.geometry("1280x820")
+        self.geometry("1600x800")
         self.minsize(1100, 720)
         self._apply_icon()
 
