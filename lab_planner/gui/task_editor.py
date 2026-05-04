@@ -75,14 +75,19 @@ class SlotGridWidget(tk.Frame):
                  fg="#666").pack(side="left", padx=(20, 0))
 
     def _draw_chrome(self):
+        # Explicit fill="#222" so day/hour labels stay visible on macOS dark
+        # mode — the system default foreground goes light, which would
+        # render invisibly against the hardcoded white canvas background.
         for d, name in enumerate(DAY_NAMES):
             y = self.LABEL_H + d * self.CELL_H + self.CELL_H / 2
-            self.canvas.create_text(self.LABEL_W / 2, y, text=name, anchor="center",
-                                    font=("TkDefaultFont", 9, "bold"))
+            self.canvas.create_text(self.LABEL_W / 2, y, text=name,
+                                    anchor="center", fill="#222",
+                                    font=("TkDefaultFont", 10, "bold"))
         for h in range(HOURS_PER_DAY):
             x = self.LABEL_W + h * self.CELL_W + self.CELL_W / 2
             self.canvas.create_text(x, self.LABEL_H / 2, text=str(h),
-                                    anchor="center", font=("TkDefaultFont", 8))
+                                    anchor="center", fill="#222",
+                                    font=("TkDefaultFont", 9))
 
     def _draw_cells(self):
         for d in range(7):
