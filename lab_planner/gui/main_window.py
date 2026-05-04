@@ -7,6 +7,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 from typing import Optional
 
+from .. import APP_NAME, __version__
 from ..models import (
     DEFAULT_RESOURCES,
     Resource,
@@ -243,7 +244,7 @@ class ScheduleFrame(tk.Frame):
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Lab Equipment Weekly Scheduler")
+        self.title(f"{APP_NAME} v{__version__}")
         self.geometry("1280x820")
         self.minsize(1100, 720)
 
@@ -268,7 +269,25 @@ class App(tk.Tk):
         filemenu.add_separator()
         filemenu.add_command(label="Quit",          command=self._on_quit)
         menu.add_cascade(label="File", menu=filemenu)
+
+        helpmenu = tk.Menu(menu, tearoff=0)
+        helpmenu.add_command(label="About…", command=self._show_about)
+        menu.add_cascade(label="Help", menu=helpmenu)
+
         self.protocol("WM_DELETE_WINDOW", self._on_quit)
+
+    def _show_about(self):
+        import platform
+        from ortools import __version__ as ortools_version
+        messagebox.showinfo(
+            f"About {APP_NAME}",
+            f"{APP_NAME}\n"
+            f"Version {__version__}\n\n"
+            "CP-SAT scheduler for shared lab equipment.\n"
+            "Built with Google OR-Tools and tkinter.\n\n"
+            f"Python {platform.python_version()}  •  "
+            f"OR-Tools {ortools_version}",
+        )
 
     def _build_tabs(self):
         nb = ttk.Notebook(self)
@@ -420,4 +439,4 @@ class App(tk.Tk):
     def _update_title(self):
         name = self.current_file.name if self.current_file else "(unsaved)"
         mark = "*" if self._dirty else ""
-        self.title(f"Lab Equipment Weekly Scheduler — {name}{mark}")
+        self.title(f"{APP_NAME} v{__version__} — {name}{mark}")

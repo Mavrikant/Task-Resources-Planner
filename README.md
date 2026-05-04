@@ -1,4 +1,4 @@
-# Lab Equipment Weekly Scheduler
+# Task-Resources Planner
 
 A desktop tool that builds a tight one-week schedule for shared lab
 equipment. The constraint-programming engine (Google OR-Tools CP-SAT)

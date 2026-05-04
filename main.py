@@ -1,4 +1,4 @@
-"""Entry point for the Lab Equipment Weekly Scheduler GUI."""
+"""Entry point for the Task-Resources Planner GUI."""
 from lab_planner.gui.main_window import App
 
 

@@ -121,7 +121,7 @@ class GanttFrame(tk.Frame):
                              linewidth=0.9, alpha=0.7, zorder=1)
 
         self.ax.set_xlabel("Hour of day  (Mon-Sun, 0-23)")
-        self.ax.set_title("Lab equipment weekly schedule")
+        self.ax.set_title("Task-Resources Planner — weekly schedule")
 
         # Legend: tasks plus the two background categories.
         handles = []
