@@ -1,7 +1,9 @@
 """Data models for the lab equipment scheduler.
 
-Time is measured in 1-hour slots over a 7-day horizon (168 slots total).
-A slot index `s` maps to: day = s // 24 (0=Mon..6=Sun), hour = s % 24.
+A schedule covers one week as 168 one-hour slots. A `Task` is the unit of
+work scheduled: it consumes a multiset of physical resource units for
+`hours` consecutive hours and may declare its own preferred and
+unavailable slots.
 """
 from __future__ import annotations
 
@@ -30,29 +32,29 @@ class Resource:
 
 @dataclass
 class Task:
-    """A single piece of work a team needs done on a resource type."""
-    resource: str          # name matching a Resource
-    hours: int             # required hours (1..24 typical)
-    allow_split: bool = True
-
-    def __post_init__(self) -> None:
-        if self.hours < 1:
-            raise ValueError(f"Task hours must be >= 1 (got {self.hours})")
-        if self.hours > HORIZON:
-            raise ValueError(f"Task hours {self.hours} exceeds horizon {HORIZON}")
-
-
-@dataclass
-class Team:
-    """A team that owns a list of tasks plus per-team slot preferences."""
+    """A scheduled piece of work that locks one or more units together for `hours`."""
     name: str
-    tasks: list[Task] = field(default_factory=list)
+    requirements: dict[str, int] = field(default_factory=dict)
+    hours: int = 1
     preferred_slots: set[int] = field(default_factory=set)
     unavailable_slots: set[int] = field(default_factory=set)
 
     def __post_init__(self) -> None:
         if not self.name:
-            raise ValueError("Team name cannot be empty")
+            raise ValueError("Task name cannot be empty")
+        if self.hours < 1:
+            raise ValueError(f"Task hours must be >= 1 (got {self.hours})")
+        if self.hours > HORIZON:
+            raise ValueError(f"Task hours {self.hours} exceeds horizon {HORIZON}")
+        if not self.requirements:
+            raise ValueError(f"Task {self.name!r} has no resource requirements")
+        for res, qty in self.requirements.items():
+            if not res:
+                raise ValueError("Empty resource name in requirements")
+            if qty < 1:
+                raise ValueError(
+                    f"Task {self.name!r}: requirement for {res!r} must be >= 1"
+                )
         self.preferred_slots = {int(s) for s in self.preferred_slots}
         self.unavailable_slots = {int(s) for s in self.unavailable_slots}
         for s in self.preferred_slots | self.unavailable_slots:
@@ -60,18 +62,20 @@ class Team:
                 raise ValueError(f"Slot {s} out of range [0, {HORIZON})")
         overlap = self.preferred_slots & self.unavailable_slots
         if overlap:
-            raise ValueError(f"Slots cannot be both preferred and unavailable: {sorted(overlap)}")
+            raise ValueError(
+                f"Slots cannot be both preferred and unavailable: {sorted(overlap)}"
+            )
 
 
 @dataclass
 class Assignment:
-    """A single 1-hour-or-longer block of work in the produced schedule."""
-    team_name: str
-    task_index: int       # index within team.tasks
+    """One physical unit reserved by one task during one continuous span."""
+    task_name: str
+    task_index: int
     resource_name: str
-    unit_id: int          # global physical-unit id (0..total_units-1)
+    unit_id: int
     start_slot: int
-    end_slot: int         # exclusive
+    end_slot: int
 
     @property
     def duration(self) -> int:
@@ -80,8 +84,7 @@ class Assignment:
 
 @dataclass
 class ScheduleResult:
-    """Outcome of one solve."""
-    status_name: str                       # "OPTIMAL" / "FEASIBLE" / "INFEASIBLE" / ...
+    status_name: str
     feasible: bool
     makespan: Optional[int]
     solve_time_s: float
@@ -89,7 +92,7 @@ class ScheduleResult:
     diagnostic: str = ""
 
 
-# --- Default resource pool from the user's brief ----------------------------
+# --- Default resource pool from the user's brief ---------------------------
 
 DEFAULT_RESOURCES: list[Resource] = [
     Resource("VSG",   3),
@@ -133,3 +136,11 @@ def unit_label(units: list[tuple[int, str, int]], unit_id: int) -> str:
     if len(same_type) == 1:
         return name
     return f"{name} #{idx + 1}"
+
+
+def format_requirements(req: dict[str, int]) -> str:
+    """Pretty 'VSG×2 + OBB + IFF' style summary."""
+    parts = []
+    for name, qty in req.items():
+        parts.append(f"{name}×{qty}" if qty > 1 else name)
+    return " + ".join(parts) if parts else "(none)"

@@ -1,116 +1,120 @@
-"""Tests for the CP-SAT scheduling model."""
-import pytest
-
+"""Tests for the CP-SAT scheduling model (tasks-first, multi-resource)."""
 from lab_planner.models import (
     DEFAULT_RESOURCES,
     HORIZON,
     Resource,
     Task,
-    Team,
 )
 from lab_planner.solver import build_and_solve
 
 
-def test_two_team_smoke():
-    """Two teams, each with VSG 3h + OBB 2h, contiguous, no preferences."""
-    teams = [
-        Team("A", tasks=[Task("VSG", 3, allow_split=False),
-                         Task("OBB", 2, allow_split=False)]),
-        Team("B", tasks=[Task("VSG", 3, allow_split=False),
-                         Task("OBB", 2, allow_split=False)]),
-    ]
-    res = build_and_solve(teams, DEFAULT_RESOURCES, time_limit_s=10)
-    assert res.feasible, f"unexpected status {res.status_name}: {res.diagnostic}"
-    # Optimal makespan is 5 — both teams fit OBB serially while sharing VSGs
-    assert res.makespan is not None and res.makespan <= 7
-    assert len(res.assignments) == 4
-
-    # No two assignments may share the same physical unit at the same slot
-    by_unit: dict[int, list[tuple[int, int]]] = {}
-    for a in res.assignments:
-        by_unit.setdefault(a.unit_id, []).append((a.start_slot, a.end_slot))
-    for uid, blocks in by_unit.items():
-        blocks.sort()
-        for (s1, e1), (s2, e2) in zip(blocks, blocks[1:]):
-            assert e1 <= s2, f"unit {uid} overlap: {(s1,e1)} vs {(s2,e2)}"
-
-    # Same team must never be doing two things at once
-    by_team: dict[str, list[tuple[int, int]]] = {}
-    for a in res.assignments:
-        by_team.setdefault(a.team_name, []).append((a.start_slot, a.end_slot))
-    for name, blocks in by_team.items():
-        blocks.sort()
-        for (s1, e1), (s2, e2) in zip(blocks, blocks[1:]):
-            assert e1 <= s2, f"team {name} overlap: {(s1,e1)} vs {(s2,e2)}"
-
-
-def test_unavailable_blocks_slot():
-    """A team's tasks must avoid unavailable slots entirely."""
-    unavail = set(range(0, 10))
-    teams = [
-        Team("A", tasks=[Task("VSG", 3, allow_split=True)],
-             unavailable_slots=unavail),
-    ]
-    res = build_and_solve(teams, DEFAULT_RESOURCES, time_limit_s=10)
+def test_single_task_smoke():
+    tasks = [Task("Build", requirements={"VSG": 1, "OBB": 1}, hours=3)]
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=5)
     assert res.feasible
-    # Every chunk slot must be at or after slot 10
-    for a in res.assignments:
-        for s in range(a.start_slot, a.end_slot):
-            assert s not in unavail, f"chunk landed in unavailable slot {s}"
+    assert res.makespan == 3
+    # Should have one assignment per required unit
+    assert len(res.assignments) == 2
+    by_resource = {a.resource_name for a in res.assignments}
+    assert by_resource == {"VSG", "OBB"}
+    # All assignments span the same window
+    starts = {a.start_slot for a in res.assignments}
+    ends = {a.end_slot for a in res.assignments}
+    assert starts == {0} and ends == {3}
 
 
-def test_preferred_bonus_breaks_tie():
-    """When makespan is fixed by another job, the team's task should
-    drift to its preferred window."""
-    # Team B's huge task forces makespan = 50.  Team A's small task can
-    # then go anywhere in [0, 45]; preferred slots {45..49} should pull it.
-    teams = [
-        Team("A",
-             tasks=[Task("VSG", 5, allow_split=False)],
-             preferred_slots=set(range(45, 50))),
-        Team("B",
-             tasks=[Task("OBB", 50, allow_split=False)]),
-    ]
-    res = build_and_solve(teams, DEFAULT_RESOURCES, time_limit_s=15)
+def test_multi_unit_per_type():
+    """Task asking for 2× VSG must reserve two distinct VSG units."""
+    tasks = [Task("Wide", requirements={"VSG": 2}, hours=2)]
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=5)
     assert res.feasible
-    a_blocks = [a for a in res.assignments if a.team_name == "A"]
-    assert len(a_blocks) == 1
-    assert a_blocks[0].start_slot == 45, (
-        f"expected start 45 to maximise preferred-slot hits, got {a_blocks[0].start_slot}"
-    )
+    assert len(res.assignments) == 2
+    assert all(a.resource_name == "VSG" for a in res.assignments)
+    # The two reserved units are distinct
+    assert len({a.unit_id for a in res.assignments}) == 2
+
+
+def test_unit_no_overlap_serializes_two_tasks():
+    """Two tasks both needing OBB (only 1 unit) must run back-to-back."""
+    tasks = [
+        Task("A", requirements={"OBB": 1}, hours=3),
+        Task("B", requirements={"OBB": 1}, hours=2),
+    ]
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=5)
+    assert res.feasible
+    assert res.makespan == 5
+    obb = sorted([(a.start_slot, a.end_slot, a.task_name)
+                  for a in res.assignments if a.resource_name == "OBB"])
+    # No overlap on the single OBB unit
+    assert obb[0][1] <= obb[1][0]
+
+
+def test_unavailable_blocks_window():
+    tasks = [
+        Task("A", requirements={"VSG": 1}, hours=4,
+             unavailable_slots=set(range(0, 10))),
+    ]
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=5)
+    assert res.feasible
+    a = res.assignments[0]
+    assert a.start_slot >= 10
+    # No assignment overlaps any unavailable slot
+    for s in range(a.start_slot, a.end_slot):
+        assert s not in set(range(0, 10))
+
+
+def test_preferred_pulls_into_window():
+    """When makespan is fixed by another task, the small task drifts to its green window."""
+    tasks = [
+        Task("Small", requirements={"VSG": 1}, hours=3,
+             preferred_slots=set(range(40, 50))),
+        Task("Huge",  requirements={"OBB": 1}, hours=50),
+    ]
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=10)
+    assert res.feasible
+    small = next(a for a in res.assignments if a.task_name == "Small")
+    # Should land entirely within the preferred window
+    assert 40 <= small.start_slot and small.end_slot <= 50
 
 
 def test_infeasible_returns_status():
-    """When demand exceeds capacity the solver reports INFEASIBLE cleanly."""
-    teams = [
-        Team("A",
-             tasks=[Task("VSG", 1, allow_split=False)],
-             unavailable_slots=set(range(HORIZON))),  # all 168 slots blocked
+    tasks = [
+        Task("Bad", requirements={"VSG": 1}, hours=1,
+             unavailable_slots=set(range(HORIZON))),
     ]
-    res = build_and_solve(teams, DEFAULT_RESOURCES, time_limit_s=5)
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=5)
     assert not res.feasible
     assert res.status_name in {"INFEASIBLE", "INVALID"}
-    assert res.diagnostic  # gave a hint
+    assert res.diagnostic
 
 
-def test_split_task_distributes_chunks():
-    """A 4h splittable task on a single-unit resource shared by two teams
-    should still produce a valid plan with 4 chunks."""
-    teams = [
-        Team("A", tasks=[Task("OBB", 4, allow_split=True)]),
-        Team("B", tasks=[Task("OBB", 4, allow_split=True)]),
-    ]
-    res = build_and_solve(teams, DEFAULT_RESOURCES, time_limit_s=10)
-    assert res.feasible
-    assert sum(1 for a in res.assignments if a.team_name == "A") == 4
-    assert sum(1 for a in res.assignments if a.team_name == "B") == 4
-    # Total OBB usage = 8 hours, all on unit 0 since OBB has 1 unit
-    obb = [a for a in res.assignments if a.resource_name == "OBB"]
-    assert len({a.unit_id for a in obb}) == 1
-
-
-def test_unknown_resource_is_caught():
-    teams = [Team("A", tasks=[Task("DOES_NOT_EXIST", 1)])]
-    res = build_and_solve(teams, DEFAULT_RESOURCES, time_limit_s=2)
+def test_unknown_resource_caught_early():
+    tasks = [Task("Bad", requirements={"NOPE": 1}, hours=1)]
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=2)
     assert not res.feasible
-    assert "DOES_NOT_EXIST" in res.diagnostic
+    assert "NOPE" in res.diagnostic
+
+
+def test_quantity_exceeding_pool_caught_early():
+    tasks = [Task("Bad", requirements={"OBB": 5}, hours=1)]  # only 1 OBB unit exists
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=2)
+    assert not res.feasible
+    assert "OBB" in res.diagnostic
+
+
+def test_three_tasks_share_resources_correctly():
+    """Three short tasks each need VSG (3 units) and OBB (1 unit).
+    OBB serializes them; VSG can run in parallel."""
+    tasks = [
+        Task(f"T{i}", requirements={"VSG": 1, "OBB": 1}, hours=2)
+        for i in range(3)
+    ]
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=5)
+    assert res.feasible
+    assert res.makespan == 6  # 3 × 2h serialized on OBB
+
+    # On the OBB unit, blocks are non-overlapping
+    obb = sorted([(a.start_slot, a.end_slot)
+                  for a in res.assignments if a.resource_name == "OBB"])
+    for (s1, e1), (s2, e2) in zip(obb, obb[1:]):
+        assert e1 <= s2

@@ -1,61 +1,54 @@
-"""JSON save/load for projects (teams + resources)."""
+"""JSON save/load for projects (tasks + resources)."""
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
-from .models import Resource, Task, Team
+from .models import Resource, Task
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def save_project(path: str | Path,
-                 teams: list[Team],
+                 tasks: list[Task],
                  resources: list[Resource]) -> None:
-    """Serialize teams and resources to a UTF-8 JSON file."""
     payload = {
         "version": SCHEMA_VERSION,
         "resources": [{"name": r.name, "units": r.units} for r in resources],
-        "teams": [
+        "tasks": [
             {
-                "name": team.name,
-                "tasks": [
-                    {"resource": t.resource, "hours": t.hours,
-                     "allow_split": t.allow_split}
-                    for t in team.tasks
-                ],
-                "preferred_slots": sorted(team.preferred_slots),
-                "unavailable_slots": sorted(team.unavailable_slots),
+                "name": t.name,
+                "requirements": dict(t.requirements),
+                "hours": t.hours,
+                "preferred_slots": sorted(t.preferred_slots),
+                "unavailable_slots": sorted(t.unavailable_slots),
             }
-            for team in teams
+            for t in tasks
         ],
     }
-    p = Path(path)
-    p.write_text(json.dumps(payload, ensure_ascii=False, indent=2),
-                 encoding="utf-8")
+    Path(path).write_text(json.dumps(payload, ensure_ascii=False, indent=2),
+                          encoding="utf-8")
 
 
-def load_project(path: str | Path) -> tuple[list[Team], list[Resource]]:
-    """Read a project file and return (teams, resources)."""
-    p = Path(path)
-    data = json.loads(p.read_text(encoding="utf-8"))
-    if data.get("version") != SCHEMA_VERSION:
+def load_project(path: str | Path) -> tuple[list[Task], list[Resource]]:
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    version = data.get("version")
+    if version != SCHEMA_VERSION:
         raise ValueError(
-            f"Unsupported project schema version: {data.get('version')!r}"
+            f"Unsupported project schema version {version!r}; "
+            f"expected {SCHEMA_VERSION}. (Old team-based files are no "
+            "longer supported — recreate the project with tasks instead.)"
         )
     resources = [Resource(name=r["name"], units=int(r["units"]))
                  for r in data.get("resources", [])]
-    teams: list[Team] = []
-    for t in data.get("teams", []):
-        tasks = [Task(resource=tt["resource"],
-                      hours=int(tt["hours"]),
-                      allow_split=bool(tt.get("allow_split", True)))
-                 for tt in t.get("tasks", [])]
-        teams.append(Team(
+    tasks: list[Task] = []
+    for t in data.get("tasks", []):
+        tasks.append(Task(
             name=t["name"],
-            tasks=tasks,
+            requirements={k: int(v) for k, v in t.get("requirements", {}).items()},
+            hours=int(t.get("hours", 1)),
             preferred_slots=set(t.get("preferred_slots", [])),
             unavailable_slots=set(t.get("unavailable_slots", [])),
         ))
-    return teams, resources
+    return tasks, resources

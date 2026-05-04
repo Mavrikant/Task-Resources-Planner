@@ -7,9 +7,9 @@ from lab_planner.models import (
     Assignment,
     Resource,
     Task,
-    Team,
     day_hour_to_slot,
     expand_units,
+    format_requirements,
     slot_to_day_hour,
     unit_label,
 )
@@ -36,19 +36,34 @@ def test_resource_validation():
         Resource("VSG", 0)
 
 
-def test_task_validation():
+def test_task_must_have_requirements():
     with pytest.raises(ValueError):
-        Task("VSG", 0)
-    with pytest.raises(ValueError):
-        Task("VSG", HORIZON + 1)
+        Task("X", requirements={}, hours=1)
 
 
-def test_team_slot_validation():
-    Team("A", preferred_slots={0, 5, 167})
+def test_task_hours_validation():
     with pytest.raises(ValueError):
-        Team("A", preferred_slots={168})
+        Task("X", requirements={"VSG": 1}, hours=0)
     with pytest.raises(ValueError):
-        Team("A", preferred_slots={0}, unavailable_slots={0})
+        Task("X", requirements={"VSG": 1}, hours=HORIZON + 1)
+
+
+def test_task_requirement_qty_validation():
+    with pytest.raises(ValueError):
+        Task("X", requirements={"VSG": 0}, hours=1)
+    with pytest.raises(ValueError):
+        Task("X", requirements={"": 1}, hours=1)
+
+
+def test_task_slot_validation():
+    Task("X", requirements={"VSG": 1}, hours=2,
+         preferred_slots={0, 167})
+    with pytest.raises(ValueError):
+        Task("X", requirements={"VSG": 1}, hours=2,
+             preferred_slots={168})
+    with pytest.raises(ValueError):
+        Task("X", requirements={"VSG": 1}, hours=2,
+             preferred_slots={5}, unavailable_slots={5})
 
 
 def test_slot_conversions_roundtrip():
@@ -65,15 +80,19 @@ def test_expand_units_assigns_unique_ids():
 
 def test_unit_label_singletons_have_no_index():
     units = expand_units(DEFAULT_RESOURCES)
-    # OBB has only 1 unit -> label is just "OBB"
     obb_id = next(u[0] for u in units if u[1] == "OBB")
     assert unit_label(units, obb_id) == "OBB"
-    # VSG has 3 -> labels are "VSG #1", "VSG #2", "VSG #3"
     vsg_ids = [u[0] for u in units if u[1] == "VSG"]
     labels = [unit_label(units, uid) for uid in vsg_ids]
     assert labels == ["VSG #1", "VSG #2", "VSG #3"]
 
 
+def test_format_requirements():
+    assert format_requirements({"VSG": 2, "OBB": 1}) == "VSG×2 + OBB"
+    assert format_requirements({"VSG": 1}) == "VSG"
+    assert format_requirements({}) == "(none)"
+
+
 def test_assignment_duration():
-    a = Assignment("A", 0, "VSG", 0, 5, 9)
+    a = Assignment("X", 0, "VSG", 0, 5, 9)
     assert a.duration == 4
