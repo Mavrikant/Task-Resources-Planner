@@ -11,6 +11,8 @@ from ..models import (
     HOURS_PER_DAY,
     Resource,
     Task,
+    is_weekend,
+    is_work_hour,
 )
 
 
@@ -20,8 +22,10 @@ class SlotGridWidget(tk.Frame):
     """A 7x24 click-to-cycle grid showing preferred / unavailable slots."""
 
     NEUTRAL, PREFERRED, UNAVAILABLE = 0, 1, 2
-    COLOURS = {
-        NEUTRAL: "#ffffff",
+    NEUTRAL_WORK = "#ffffff"
+    NEUTRAL_OFF_HOURS = "#ececec"   # light grey for off-hours weekday
+    NEUTRAL_WEEKEND = "#dcdcdc"     # darker grey for weekend
+    COLOURS_STATEFUL = {
         PREFERRED: "#a8e6a3",
         UNAVAILABLE: "#ff9b9b",
     }
@@ -50,9 +54,11 @@ class SlotGridWidget(tk.Frame):
 
         legend = tk.Frame(self)
         legend.pack(anchor="w", pady=(4, 0))
-        for label, colour in [("Neutral", self.COLOURS[self.NEUTRAL]),
-                              ("Preferred", self.COLOURS[self.PREFERRED]),
-                              ("Unavailable", self.COLOURS[self.UNAVAILABLE])]:
+        for label, colour in [("Work hours", self.NEUTRAL_WORK),
+                              ("Off-hours",  self.NEUTRAL_OFF_HOURS),
+                              ("Weekend",    self.NEUTRAL_WEEKEND),
+                              ("Preferred",  self.COLOURS_STATEFUL[self.PREFERRED]),
+                              ("Unavailable", self.COLOURS_STATEFUL[self.UNAVAILABLE])]:
             sw = tk.Frame(legend, width=14, height=14, bg=colour,
                           highlightthickness=1, highlightbackground="#888")
             sw.pack(side="left", padx=(8, 2))
@@ -78,9 +84,21 @@ class SlotGridWidget(tk.Frame):
                 y0 = self.LABEL_H + d * self.CELL_H
                 rid = self.canvas.create_rectangle(
                     x0, y0, x0 + self.CELL_W, y0 + self.CELL_H,
-                    fill=self.COLOURS[self.NEUTRAL], outline="#dddddd",
+                    fill=self._neutral_colour(slot), outline="#dddddd",
                 )
                 self._rid_by_slot[slot] = rid
+
+    def _neutral_colour(self, slot: int) -> str:
+        if is_weekend(slot):
+            return self.NEUTRAL_WEEKEND
+        if is_work_hour(slot):
+            return self.NEUTRAL_WORK
+        return self.NEUTRAL_OFF_HOURS
+
+    def _colour_for(self, slot: int, state: int) -> str:
+        if state in self.COLOURS_STATEFUL:
+            return self.COLOURS_STATEFUL[state]
+        return self._neutral_colour(slot)
 
     def _slot_at(self, event) -> Optional[int]:
         x = event.x - self.LABEL_W
@@ -110,7 +128,7 @@ class SlotGridWidget(tk.Frame):
             return
         self._states[slot] = state
         self.canvas.itemconfig(self._rid_by_slot[slot],
-                               fill=self.COLOURS[state])
+                               fill=self._colour_for(slot, state))
         if self.on_change:
             self.on_change(slot, state)
 
@@ -121,7 +139,9 @@ class SlotGridWidget(tk.Frame):
         for s in task.unavailable_slots:
             self._states[s] = self.UNAVAILABLE
         for slot, rid in self._rid_by_slot.items():
-            self.canvas.itemconfig(rid, fill=self.COLOURS[self._states[slot]])
+            self.canvas.itemconfig(
+                rid, fill=self._colour_for(slot, self._states[slot])
+            )
 
 
 # --- requirement edit dialog ------------------------------------------------
@@ -208,8 +228,16 @@ class TaskEditorFrame(tk.Frame):
         self.hours_spin = tk.Spinbox(top, from_=1, to=HORIZON, width=5,
                                        textvariable=self.hours_var,
                                        command=self._on_hours_changed)
-        self.hours_spin.pack(side="left", padx=(6, 0))
+        self.hours_spin.pack(side="left", padx=(6, 16))
         self.hours_var.trace_add("write", lambda *a: self._on_hours_changed())
+
+        self.work_only_var = tk.BooleanVar(value=False)
+        self.work_only_chk = tk.Checkbutton(
+            top, text="Work hours only (Mon-Fri 08-18)",
+            variable=self.work_only_var,
+            command=self._on_work_only_changed,
+        )
+        self.work_only_chk.pack(side="left")
 
         # requirements table
         req_frame = tk.LabelFrame(self, text="Required resources")
@@ -251,6 +279,7 @@ class TaskEditorFrame(tk.Frame):
             self._building = True
             self.name_var.set("")
             self.hours_var.set(1)
+            self.work_only_var.set(False)
             self.req_tree.delete(*self.req_tree.get_children())
             self._building = False
             return
@@ -258,6 +287,7 @@ class TaskEditorFrame(tk.Frame):
         self._building = True
         self.name_var.set(task.name)
         self.hours_var.set(task.hours)
+        self.work_only_var.set(task.work_hours_only)
         self._refresh_requirements()
         self.slot_grid.load_from_task(task)
         self._building = False
@@ -283,6 +313,12 @@ class TaskEditorFrame(tk.Frame):
         self._task.hours = h
         self._on_dirty()
         self._on_changed()
+
+    def _on_work_only_changed(self):
+        if self._building or self._task is None:
+            return
+        self._task.work_hours_only = bool(self.work_only_var.get())
+        self._on_dirty()
 
     def _on_grid_change(self, slot: int, state: int):
         if self._task is None:
@@ -361,3 +397,4 @@ class TaskEditorFrame(tk.Frame):
         state = "normal" if enabled else "disabled"
         self.name_entry.config(state=state)
         self.hours_spin.config(state=state)
+        self.work_only_chk.config(state=state)

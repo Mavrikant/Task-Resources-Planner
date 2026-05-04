@@ -16,6 +16,11 @@ DAYS = 7
 HOURS_PER_DAY = 24
 DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
+# Work-hours definition: weekdays Mon..Fri, 08:00..18:00 (so 18:00 itself is off).
+WORK_START_HOUR = 8
+WORK_END_HOUR = 18           # exclusive: hour 17 is the last work hour
+WORKDAYS = frozenset({0, 1, 2, 3, 4})   # Mon..Fri
+
 
 @dataclass
 class Resource:
@@ -38,6 +43,7 @@ class Task:
     hours: int = 1
     preferred_slots: set[int] = field(default_factory=set)
     unavailable_slots: set[int] = field(default_factory=set)
+    work_hours_only: bool = False  # if True, must run inside Mon-Fri 08-18
 
     def __post_init__(self) -> None:
         if not self.name:
@@ -112,6 +118,22 @@ DEFAULT_RESOURCES: list[Resource] = [
 
 def slot_to_day_hour(slot: int) -> tuple[int, int]:
     return slot // HOURS_PER_DAY, slot % HOURS_PER_DAY
+
+
+def is_work_hour(slot: int) -> bool:
+    """True if `slot` falls within Mon-Fri 08:00-18:00."""
+    day, hour = slot_to_day_hour(slot)
+    return day in WORKDAYS and WORK_START_HOUR <= hour < WORK_END_HOUR
+
+
+def is_weekend(slot: int) -> bool:
+    day, _ = slot_to_day_hour(slot)
+    return day not in WORKDAYS
+
+
+def non_work_slots() -> set[int]:
+    """All 168 - (5×10) = 118 slots that fall outside work hours."""
+    return {s for s in range(HORIZON) if not is_work_hour(s)}
 
 
 def day_hour_to_slot(day: int, hour: int) -> int:

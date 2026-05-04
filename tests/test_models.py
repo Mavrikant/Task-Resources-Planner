@@ -10,6 +10,9 @@ from lab_planner.models import (
     day_hour_to_slot,
     expand_units,
     format_requirements,
+    is_weekend,
+    is_work_hour,
+    non_work_slots,
     slot_to_day_hour,
     unit_label,
 )
@@ -96,3 +99,29 @@ def test_format_requirements():
 def test_assignment_duration():
     a = Assignment("X", 0, "VSG", 0, 5, 9)
     assert a.duration == 4
+
+
+def test_work_hour_classification():
+    # Mon 08:00 is a work hour; Mon 07:59 (slot 7) and Mon 18:00 (slot 18) are not.
+    assert is_work_hour(8) is True
+    assert is_work_hour(17) is True
+    assert is_work_hour(7) is False
+    assert is_work_hour(18) is False
+    # Sat/Sun never count even at 10:00.
+    assert is_work_hour(5 * 24 + 10) is False
+    assert is_work_hour(6 * 24 + 10) is False
+    assert is_weekend(5 * 24 + 0) is True
+    assert is_weekend(0) is False
+
+
+def test_non_work_slots_count():
+    # 5 weekdays × 10 work hours = 50; rest of the week = 168 - 50 = 118.
+    assert len(non_work_slots()) == HORIZON - 5 * 10
+    # Spot-check: Tue 14:00 is work hour, NOT in non_work_slots
+    tue_2pm = 1 * 24 + 14
+    assert tue_2pm not in non_work_slots()
+
+
+def test_task_work_hours_only_default_false():
+    t = Task("X", requirements={"VSG": 1}, hours=2)
+    assert t.work_hours_only is False

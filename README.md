@@ -17,6 +17,13 @@ chart in a tkinter GUI.
   Counts can be edited per project.
 - **Per-task slot grid.** A 7×24 click-to-cycle grid marks
   **preferred** (green) and **unavailable** (red) hours for the task.
+  The grid background already shades **work hours** (Mon-Fri 08-18),
+  **off-hours** (light grey), and **weekends** (darker grey) so you
+  can see at a glance which slots are inside business time.
+- **Work hours only.** Each task has a checkbox that, when on,
+  restricts the task to Mon-Fri 08-18 — a hard constraint enforced by
+  the solver. Off-hours-friendly tasks (e.g. ovens, long bake-outs)
+  leave it off so they can run overnight or on weekends.
 - **Optimisation objective**
   `100·makespan − 1·preferred_hits`, so:
   1. The schedule is as short as possible.
@@ -59,7 +66,9 @@ to `OPTIMAL` in well under a second.
    get a diagnostic dialog (e.g. *"Task #2 needs 5× OBB but only 1
    exists"*).
 4. **Schedule tab** — Gantt chart. Y-axis = physical unit. X-axis =
-   hour of the week with day separators. Pan/zoom with the matplotlib
+   hour of the week with day separators. **Off-hours and weekend
+   columns are shaded in the background** so you can see at a glance
+   which bars run during business time. Pan/zoom with the matplotlib
    toolbar.
 
 Use **File → Save** to write the project to JSON for later editing.

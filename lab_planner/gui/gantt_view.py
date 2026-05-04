@@ -20,6 +20,8 @@ from ..models import (
     ScheduleResult,
     Task,
     expand_units,
+    is_weekend,
+    is_work_hour,
     unit_label,
 )
 
@@ -51,6 +53,14 @@ class GanttFrame(tk.Frame):
         n_units = len(units)
         labels = [unit_label(units, uid) for uid, _, _ in units]
 
+        # Background shading: weekends (darker) and weekday off-hours (lighter).
+        for s, e in _consecutive_runs(lambda s: is_weekend(s)):
+            self.ax.axvspan(s, e, facecolor="#bdbdbd", alpha=0.35, zorder=0)
+        for s, e in _consecutive_runs(
+            lambda s: not is_work_hour(s) and not is_weekend(s)
+        ):
+            self.ax.axvspan(s, e, facecolor="#d9d9d9", alpha=0.35, zorder=0)
+
         task_names = [t.name for t in tasks]
         # Use a 40-colour palette cycling tab20 + tab20b for many tasks.
         cmap_a = plt.get_cmap("tab20")
@@ -66,6 +76,7 @@ class GanttFrame(tk.Frame):
                 (a.unit_id - 0.4, 0.8),
                 facecolors=colour.get(a.task_name, "#888888"),
                 edgecolors="black", linewidth=0.5,
+                zorder=2,
             )
             if a.duration >= 2:
                 self.ax.text(
@@ -93,11 +104,19 @@ class GanttFrame(tk.Frame):
         self.ax.set_xlabel("Hour of week")
         self.ax.set_title("Lab equipment weekly schedule")
 
+        # Legend: tasks plus the two background categories.
+        handles = []
         if task_names:
-            handles = [Patch(facecolor=colour[n], edgecolor="black", label=n)
-                       for n in task_names]
-            self.ax.legend(handles=handles, loc="upper right",
-                           fontsize=7, ncol=min(4, len(task_names)))
+            handles.extend(
+                Patch(facecolor=colour[n], edgecolor="black", label=n)
+                for n in task_names
+            )
+        handles.append(Patch(facecolor="#d9d9d9", alpha=0.35,
+                             edgecolor="#888", label="Off-hours"))
+        handles.append(Patch(facecolor="#bdbdbd", alpha=0.35,
+                             edgecolor="#888", label="Weekend"))
+        self.ax.legend(handles=handles, loc="upper right",
+                       fontsize=7, ncol=min(4, len(handles)))
 
         self.fig.tight_layout()
         self.canvas.draw()
@@ -122,3 +141,17 @@ class GanttFrame(tk.Frame):
         self.ax.set_yticks([])
         for s in self.ax.spines.values():
             s.set_visible(False)
+
+
+def _consecutive_runs(predicate):
+    """Yield (start, end) pairs of contiguous slots where `predicate(slot)` is True."""
+    start = None
+    for s in range(HORIZON):
+        if predicate(s):
+            if start is None:
+                start = s
+        elif start is not None:
+            yield start, s
+            start = None
+    if start is not None:
+        yield start, HORIZON

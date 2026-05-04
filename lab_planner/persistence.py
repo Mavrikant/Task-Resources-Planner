@@ -23,6 +23,7 @@ def save_project(path: str | Path,
                 "hours": t.hours,
                 "preferred_slots": sorted(t.preferred_slots),
                 "unavailable_slots": sorted(t.unavailable_slots),
+                "work_hours_only": t.work_hours_only,
             }
             for t in tasks
         ],
@@ -50,5 +51,6 @@ def load_project(path: str | Path) -> tuple[list[Task], list[Resource]]:
             hours=int(t.get("hours", 1)),
             preferred_slots=set(t.get("preferred_slots", [])),
             unavailable_slots=set(t.get("unavailable_slots", [])),
+            work_hours_only=bool(t.get("work_hours_only", False)),
         ))
     return tasks, resources

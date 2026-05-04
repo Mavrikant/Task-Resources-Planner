@@ -13,7 +13,8 @@ def test_roundtrip_preserves_everything(tmp_path: Path):
              requirements={"VSG": 2, "OBB": 1},
              hours=4,
              preferred_slots={10, 11, 12},
-             unavailable_slots={0, 1, 2}),
+             unavailable_slots={0, 1, 2},
+             work_hours_only=True),
         Task("Bake",
              requirements={"Fırın": 2},  # non-ASCII test
              hours=8,

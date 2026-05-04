@@ -1,0 +1,182 @@
+{
+  "version": 2,
+  "resources": [
+    {
+      "name": "VSG",
+      "units": 3
+    },
+    {
+      "name": "VSGRS",
+      "units": 1
+    },
+    {
+      "name": "OBB",
+      "units": 1
+    },
+    {
+      "name": "IFF",
+      "units": 2
+    },
+    {
+      "name": "IFR",
+      "units": 1
+    },
+    {
+      "name": "1553",
+      "units": 2
+    },
+    {
+      "name": "RFCU",
+      "units": 2
+    },
+    {
+      "name": "ADF T",
+      "units": 1
+    },
+    {
+      "name": "Fırın",
+      "units": 2
+    },
+    {
+      "name": "CT94",
+      "units": 1
+    },
+    {
+      "name": "OSC",
+      "units": 1
+    },
+    {
+      "name": "AA",
+      "units": 2
+    }
+  ],
+  "tasks": [
+    {
+      "name": "SW_EVTP",
+      "requirements": {
+        "VSG": 2,
+        "OBB": 1,
+        "1553": 1,
+        "ADF T": 1
+      },
+      "hours": 36,
+      "preferred_slots": [],
+      "unavailable_slots": [
+        1,
+        2,
+        3,
+        4,
+        6,
+        8,
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "ATP",
+      "requirements": {
+        "VSG": 1,
+        "IFF": 1,
+        "AA": 1
+      },
+      "hours": 9,
+      "preferred_slots": [
+        0
+      ],
+      "unavailable_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        127,
+        144,
+        145,
+        146,
+        147,
+        148,
+        149,
+        150,
+        151
+      ]
+    },
+    {
+      "name": "VORILS",
+      "requirements": {
+        "VSG": 1,
+        "VSGRS": 1,
+        "AA": 1,
+        "OSC": 1
+      },
+      "hours": 12,
+      "preferred_slots": [],
+      "unavailable_slots": []
+    },
+    {
+      "name": "VOR ATP",
+      "requirements": {
+        "VSG": 1,
+        "AA": 1,
+        "RFCU": 1,
+        "Fırın": 1
+      },
+      "hours": 5,
+      "preferred_slots": [
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111
+      ],
+      "unavailable_slots": []
+    }
+  ]
+}

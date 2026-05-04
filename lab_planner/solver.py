@@ -18,11 +18,20 @@ from .models import (
     ScheduleResult,
     Task,
     expand_units,
+    non_work_slots,
 )
 
 
 _MAKESPAN_W = 100   # dominating: shortest schedule wins
 _PREF_W = 1         # tie-break: prefer green slots
+
+
+def _effective_unavailable(task: Task) -> set[int]:
+    """Union of the task's own unavailable slots and (if work_hours_only) every off-hour slot."""
+    blocked = set(task.unavailable_slots)
+    if task.work_hours_only:
+        blocked |= non_work_slots()
+    return blocked
 
 
 def _validate(tasks: list[Task], resources: list[Resource]) -> str | None:
@@ -36,11 +45,13 @@ def _validate(tasks: list[Task], resources: list[Resource]) -> str | None:
                 return (f"Task #{ti} {task.name!r}: requires {qty} "
                         f"of {res_name} but pool only has "
                         f"{res_by_name[res_name].units}")
-        available = HORIZON - len(task.unavailable_slots)
+        blocked = _effective_unavailable(task)
+        available = HORIZON - len(blocked)
         if task.hours > available:
+            extra = " (work-hours-only)" if task.work_hours_only else ""
             return (f"Task #{ti} {task.name!r}: needs {task.hours}h "
-                    f"but only {available}h are available "
-                    f"after unavailable slots are removed.")
+                    f"but only {available}h are available"
+                    f"{extra} after unavailable slots are removed.")
     return None
 
 
@@ -96,11 +107,11 @@ def build_and_solve(
                     start, d, end, v, f"t{ti}_iv_u{uid}",
                 )
 
-        # Hard unavailable: any v ∈ [start, start+d) cannot be in unavailable_slots.
-        if task.unavailable_slots:
+        # Hard unavailable: any v ∈ [start, start+d) cannot be in blocked.
+        blocked = _effective_unavailable(task)
+        if blocked:
             allowed = [v for v in range(horizon - d + 1)
-                       if all((v + i) not in task.unavailable_slots
-                              for i in range(d))]
+                       if all((v + i) not in blocked for i in range(d))]
             if not allowed:
                 model.Add(start >= horizon)  # contradicts domain → infeasible
             else:
@@ -210,11 +221,13 @@ def _infeasibility_hint(tasks: list[Task], resources: list[Resource]) -> str:
     res_units = {r.name: r.units for r in resources}
     hints: list[str] = []
     for ti, task in enumerate(tasks):
-        free = HORIZON - len(task.unavailable_slots)
+        blocked = _effective_unavailable(task)
+        free = HORIZON - len(blocked)
         if task.hours > free:
+            extra = " (work-hours-only)" if task.work_hours_only else ""
             hints.append(
                 f"Task #{ti} {task.name!r} needs {task.hours}h "
-                f"but only {free}h available."
+                f"but only {free}h available{extra}."
             )
         for res, qty in task.requirements.items():
             avail = res_units.get(res, 0)

@@ -4,6 +4,7 @@ from lab_planner.models import (
     HORIZON,
     Resource,
     Task,
+    is_work_hour,
 )
 from lab_planner.solver import build_and_solve
 
@@ -100,6 +101,26 @@ def test_quantity_exceeding_pool_caught_early():
     res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=2)
     assert not res.feasible
     assert "OBB" in res.diagnostic
+
+
+def test_work_hours_only_keeps_task_inside_business_hours():
+    """A 4h work-hours-only task must run on a weekday between 08-18."""
+    tasks = [Task("Office", requirements={"VSG": 1}, hours=4,
+                  work_hours_only=True)]
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=5)
+    assert res.feasible
+    a = res.assignments[0]
+    for s in range(a.start_slot, a.end_slot):
+        assert is_work_hour(s), f"slot {s} is outside work hours"
+
+
+def test_work_hours_only_infeasible_when_too_long_for_one_workday():
+    """11-hour work-hours-only task is infeasible (work day is only 10 h)."""
+    tasks = [Task("TooLong", requirements={"VSG": 1}, hours=11,
+                  work_hours_only=True)]
+    res = build_and_solve(tasks, DEFAULT_RESOURCES, time_limit_s=5)
+    assert not res.feasible
+    assert res.status_name in {"INFEASIBLE", "INVALID"}
 
 
 def test_three_tasks_share_resources_correctly():
