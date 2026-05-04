@@ -24,5 +24,4 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-sample_*.json
 my_project*.json

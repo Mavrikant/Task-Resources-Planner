@@ -1,0 +1,357 @@
+{
+  "version": 1,
+  "resources": [
+    {
+      "name": "VSG",
+      "units": 3
+    },
+    {
+      "name": "VSGRS",
+      "units": 1
+    },
+    {
+      "name": "OBB",
+      "units": 1
+    },
+    {
+      "name": "IFF",
+      "units": 2
+    },
+    {
+      "name": "IFR",
+      "units": 1
+    },
+    {
+      "name": "1553",
+      "units": 2
+    },
+    {
+      "name": "RFCU",
+      "units": 2
+    },
+    {
+      "name": "ADF T",
+      "units": 1
+    },
+    {
+      "name": "Fırın",
+      "units": 2
+    },
+    {
+      "name": "CT94",
+      "units": 1
+    },
+    {
+      "name": "OSC",
+      "units": 1
+    },
+    {
+      "name": "AA",
+      "units": 2
+    }
+  ],
+  "teams": [
+    {
+      "name": "Radar Team",
+      "tasks": [
+        {
+          "resource": "VSG",
+          "hours": 4,
+          "allow_split": false
+        },
+        {
+          "resource": "1553",
+          "hours": 3,
+          "allow_split": true
+        },
+        {
+          "resource": "OSC",
+          "hours": 2,
+          "allow_split": false
+        }
+      ],
+      "preferred_slots": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65
+      ],
+      "unavailable_slots": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        22,
+        23
+      ]
+    },
+    {
+      "name": "EW Team",
+      "tasks": [
+        {
+          "resource": "VSGRS",
+          "hours": 6,
+          "allow_split": false
+        },
+        {
+          "resource": "VSG",
+          "hours": 5,
+          "allow_split": true
+        },
+        {
+          "resource": "AA",
+          "hours": 4,
+          "allow_split": true
+        },
+        {
+          "resource": "Fırın",
+          "hours": 8,
+          "allow_split": true
+        }
+      ],
+      "preferred_slots": [
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
+      ],
+      "unavailable_slots": [
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        127,
+        128,
+        129,
+        130,
+        131,
+        132,
+        133,
+        134,
+        135,
+        136,
+        137,
+        138,
+        139,
+        140,
+        141,
+        142,
+        143
+      ]
+    },
+    {
+      "name": "IFF/IFR Team",
+      "tasks": [
+        {
+          "resource": "IFF",
+          "hours": 6,
+          "allow_split": true
+        },
+        {
+          "resource": "IFR",
+          "hours": 4,
+          "allow_split": false
+        },
+        {
+          "resource": "ADF T",
+          "hours": 3,
+          "allow_split": false
+        }
+      ],
+      "preferred_slots": [],
+      "unavailable_slots": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        144,
+        145,
+        146,
+        147,
+        148,
+        149,
+        150,
+        151,
+        152,
+        153,
+        154,
+        155,
+        156,
+        157,
+        158,
+        159,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        166,
+        167
+      ]
+    },
+    {
+      "name": "Comm Team",
+      "tasks": [
+        {
+          "resource": "RFCU",
+          "hours": 5,
+          "allow_split": true
+        },
+        {
+          "resource": "CT94",
+          "hours": 3,
+          "allow_split": false
+        },
+        {
+          "resource": "1553",
+          "hours": 4,
+          "allow_split": true
+        }
+      ],
+      "preferred_slots": [
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95
+      ],
+      "unavailable_slots": []
+    },
+    {
+      "name": "Aux Team",
+      "tasks": [
+        {
+          "resource": "OBB",
+          "hours": 4,
+          "allow_split": true
+        },
+        {
+          "resource": "Fırın",
+          "hours": 6,
+          "allow_split": true
+        },
+        {
+          "resource": "AA",
+          "hours": 3,
+          "allow_split": false
+        }
+      ],
+      "preferred_slots": [
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71
+      ],
+      "unavailable_slots": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ]
+    }
+  ]
+}
