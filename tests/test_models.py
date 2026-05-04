@@ -26,8 +26,9 @@ def test_default_pool_totals_19_units():
 
 def test_default_pool_has_expected_types():
     names = {r.name for r in DEFAULT_RESOURCES}
-    assert names == {"VSG", "VSGRS", "OBB", "IFF", "IFR", "1553",
-                     "RFCU", "ADF T", "Fırın", "CT94", "OSC", "AA"}
+    assert names == {"VSG", "VSGRS", "OBB", "IFF", "IFR", "1553", "RFCU",
+                     "ADF Tester", "Temperature Test Chamber", "A429",
+                     "Oscilloscope", "AA"}
 
 
 def test_horizon_is_one_week():

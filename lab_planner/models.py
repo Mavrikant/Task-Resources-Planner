@@ -122,10 +122,10 @@ DEFAULT_RESOURCES: list[Resource] = [
     Resource("IFR",   1),
     Resource("1553",  2),
     Resource("RFCU",  2),
-    Resource("ADF T", 1),
-    Resource("Fırın", 2),
-    Resource("CT94",  1),
-    Resource("OSC",   1),
+    Resource("ADF Tester",                1),
+    Resource("Temperature Test Chamber",  2),
+    Resource("A429",                      1),
+    Resource("Oscilloscope",              1),
     Resource("AA",    2),
 ]
 
