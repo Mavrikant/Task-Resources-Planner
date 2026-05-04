@@ -7,7 +7,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 from typing import Optional
 
-from .. import APP_NAME, __version__
+from .. import APP_NAME, ICON_ICO_PATH, ICON_PNG_PATH, __version__
 from ..models import (
     Resource,
     ScheduleResult,
@@ -436,6 +436,7 @@ class App(tk.Tk):
         self.title(f"{APP_NAME} v{__version__}")
         self.geometry("1280x820")
         self.minsize(1100, 720)
+        self._apply_icon()
 
         self.tasks: list[Task] = []
         self.resources: list[Resource] = load_default_pool()
@@ -446,6 +447,23 @@ class App(tk.Tk):
         self._build_menu()
         self._build_tabs()
         self._update_title()
+
+    def _apply_icon(self):
+        """Set the window icon. PNG via iconphoto works everywhere; .ico
+        via iconbitmap gives a sharper taskbar icon on Windows."""
+        try:
+            if ICON_PNG_PATH.exists():
+                self._icon_image = tk.PhotoImage(file=str(ICON_PNG_PATH))
+                self.iconphoto(True, self._icon_image)
+            if ICON_ICO_PATH.exists():
+                try:
+                    self.iconbitmap(default=str(ICON_ICO_PATH))
+                except tk.TclError:
+                    # iconbitmap is Windows-only for .ico; ignore on others.
+                    pass
+        except Exception:
+            # Missing icon should never crash the app.
+            pass
 
     def _build_menu(self):
         menu = tk.Menu(self)
