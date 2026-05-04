@@ -1,13 +1,14 @@
 """Main application window with Resources / Tasks / Schedule tabs."""
 from __future__ import annotations
 
+import sys
 import threading
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 from typing import Optional
 
-from .. import APP_NAME, ICON_ICO_PATH, ICON_PNG_PATH, __version__
+from .. import APP_NAME, ICON_PNG_PATH, __version__
 from ..models import (
     Resource,
     ScheduleResult,
@@ -449,20 +450,30 @@ class App(tk.Tk):
         self._update_title()
 
     def _apply_icon(self):
-        """Set the window icon. PNG via iconphoto works everywhere; .ico
-        via iconbitmap gives a sharper taskbar icon on Windows."""
+        """Set the window icon from assets/icon.png."""
         try:
             if ICON_PNG_PATH.exists():
                 self._icon_image = tk.PhotoImage(file=str(ICON_PNG_PATH))
                 self.iconphoto(True, self._icon_image)
-            if ICON_ICO_PATH.exists():
-                try:
-                    self.iconbitmap(default=str(ICON_ICO_PATH))
-                except tk.TclError:
-                    # iconbitmap is Windows-only for .ico; ignore on others.
-                    pass
         except Exception:
             # Missing icon should never crash the app.
+            pass
+
+        if sys.platform == "darwin" and ICON_PNG_PATH.exists():
+            self._apply_macos_dock_icon()
+
+    def _apply_macos_dock_icon(self):
+        # Tk's iconphoto doesn't update the macOS Dock icon for unbundled
+        # Python apps; set it directly via AppKit when PyObjC is available.
+        try:
+            from AppKit import NSApplication, NSImage
+        except Exception:
+            return
+        try:
+            image = NSImage.alloc().initWithContentsOfFile_(str(ICON_PNG_PATH))
+            if image is not None:
+                NSApplication.sharedApplication().setApplicationIconImage_(image)
+        except Exception:
             pass
 
     def _build_menu(self):

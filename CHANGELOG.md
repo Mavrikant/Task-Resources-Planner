@@ -7,9 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- App icon (Gantt-themed) — bundled at `assets/icon_64.png` + `assets/icon.ico`,
-  applied to the window via `iconphoto`/`iconbitmap`.
-- `tools/generate_icon.py` — Pillow-based regenerator for the icon.
+- App icon — bundled at `assets/icon.png`, applied to the window via
+  `iconphoto` and (on macOS) the Dock via PyObjC/AppKit.
 - `Task.continue_next_day`: when paired with `work_hours_only`, long tasks
   may span multiple consecutive work-day windows (e.g. 18 h becomes Mon
   08-18 + Tue 08-16 with the equipment released overnight). Solver

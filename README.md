@@ -102,7 +102,6 @@ lab_planner/
     task_editor.py     task detail pane + 7×24 SlotGridWidget
     gantt_view.py      matplotlib Gantt embedded in tkinter
 tests/                 unit tests for models, solver, persistence
-tools/generate_icon.py one-time icon generator (Pillow)
 assets/                bundled icons
 docs/                  screenshots used in the README
 main.py                entry point

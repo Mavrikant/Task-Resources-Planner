@@ -1,3 +1,4 @@
 ortools>=9.10
 matplotlib>=3.9
 pytest>=8.0
+pyobjc-framework-Cocoa>=10.0; sys_platform == "darwin"
