@@ -12,6 +12,7 @@ from ..models import (
     Resource,
     ScheduleResult,
     Task,
+    duplicate_task,
     format_requirements,
 )
 from ..persistence import load_project, save_project
@@ -96,8 +97,9 @@ class TasksFrame(tk.Frame):
 
         btn_row = tk.Frame(left)
         btn_row.pack(fill="x", pady=4)
-        tk.Button(btn_row, text="Add task", command=self._add_task).pack(side="left")
-        tk.Button(btn_row, text="Delete", command=self._delete_task).pack(side="left", padx=4)
+        tk.Button(btn_row, text="Add",       command=self._add_task).pack(side="left")
+        tk.Button(btn_row, text="Duplicate", command=self._duplicate_task).pack(side="left", padx=4)
+        tk.Button(btn_row, text="Delete",    command=self._delete_task).pack(side="left")
 
         # right: editor + solve button
         right = tk.Frame(self)
@@ -186,6 +188,18 @@ class TasksFrame(tk.Frame):
         self.app.mark_dirty()
         self.refresh()
         self.select(len(self.app.tasks) - 1)
+
+    def _duplicate_task(self):
+        idx = self._current_index()
+        if idx is None:
+            messagebox.showinfo("Duplicate task",
+                                  "Select a task in the list first.")
+            return
+        new_task = duplicate_task(self.app.tasks[idx])
+        self.app.tasks.insert(idx + 1, new_task)
+        self.app.mark_dirty()
+        self.refresh()
+        self.select(idx + 1)
 
     def _delete_task(self):
         idx = self._current_index()

@@ -8,10 +8,12 @@ from lab_planner.models import (
     Resource,
     Task,
     day_hour_to_slot,
+    duplicate_task,
     expand_units,
     format_requirements,
     is_weekend,
     is_work_hour,
+    next_copy_name,
     non_work_slots,
     slot_to_day_hour,
     unit_label,
@@ -125,3 +127,33 @@ def test_non_work_slots_count():
 def test_task_work_hours_only_default_false():
     t = Task("X", requirements={"VSG": 1}, hours=2)
     assert t.work_hours_only is False
+
+
+def test_next_copy_name_progression():
+    assert next_copy_name("Foo") == "Foo (copy)"
+    assert next_copy_name("Foo (copy)") == "Foo (copy 2)"
+    assert next_copy_name("Foo (copy 2)") == "Foo (copy 3)"
+    assert next_copy_name("Foo (copy 7)") == "Foo (copy 8)"
+    # Names that look similar but are not the suffix pattern stay intact.
+    assert next_copy_name("Foo (final)") == "Foo (final) (copy)"
+
+
+def test_duplicate_task_is_deep_copy():
+    src = Task("Build",
+               requirements={"VSG": 2, "OBB": 1},
+               hours=4,
+               preferred_slots={10, 11, 12},
+               unavailable_slots={0},
+               work_hours_only=True)
+    dup = duplicate_task(src)
+    assert dup.name == "Build (copy)"
+    assert dup.requirements == src.requirements
+    assert dup.preferred_slots == src.preferred_slots
+    assert dup.unavailable_slots == src.unavailable_slots
+    assert dup.hours == src.hours
+    assert dup.work_hours_only == src.work_hours_only
+    # Mutating the source must not bleed into the copy.
+    src.preferred_slots.add(99)
+    src.requirements["AA"] = 1
+    assert 99 not in dup.preferred_slots
+    assert "AA" not in dup.requirements

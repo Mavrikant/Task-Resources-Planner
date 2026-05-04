@@ -7,6 +7,8 @@ unavailable slots.
 """
 from __future__ import annotations
 
+import copy
+import re
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -166,3 +168,28 @@ def format_requirements(req: dict[str, int]) -> str:
     for name, qty in req.items():
         parts.append(f"{name}×{qty}" if qty > 1 else name)
     return " + ".join(parts) if parts else "(none)"
+
+
+_COPY_RE = re.compile(r"^(?P<stem>.*) \(copy(?: (?P<n>\d+))?\)$")
+
+
+def next_copy_name(base: str) -> str:
+    """Generate the next sensible name for a duplicated task.
+
+    'Foo'           → 'Foo (copy)'
+    'Foo (copy)'    → 'Foo (copy 2)'
+    'Foo (copy 7)'  → 'Foo (copy 8)'
+    """
+    m = _COPY_RE.match(base)
+    if not m:
+        return f"{base} (copy)"
+    stem = m.group("stem")
+    n = int(m.group("n") or 1) + 1
+    return f"{stem} (copy {n})"
+
+
+def duplicate_task(task: Task) -> Task:
+    """Return a deep copy of `task` with an auto-generated copy-name."""
+    new = copy.deepcopy(task)
+    new.name = next_copy_name(task.name)
+    return new
