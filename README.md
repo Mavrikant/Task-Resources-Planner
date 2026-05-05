@@ -67,8 +67,12 @@ success.
 
 ![Resources tab](docs/screenshot-resources.png)
 
-Twelve equipment types, 19 physical units in the default pool. Add /
-Edit / Delete types, or **Import pool / Export pool** to share standalone
+Twenty-five equipment types, 48 physical units in the default pool — a
+mix of avionics-specific testers (VSG, IFF, A429, RFCU, …) and generic
+bench gear (power supplies, multimeters, function/spectrum/network/logic
+analyzers, frequency counters, soldering stations, DC electronic loads,
+workstation PCs, microscope, LCR meter, calibration kit). Add / Edit /
+Delete types, or **Import pool / Export pool** to share standalone
 equipment-pool JSON across projects. Renaming an equipment cascades into
 every task that referenced the old name.
 
@@ -91,11 +95,13 @@ python main.py
 ```
 
 A pre-built sample is included — use **File → Open…** (or `Cmd/Ctrl + O`)
-on `sample_project.json` to load 22 representative tasks (mixed work-hours,
+on `sample_project.json` to load 32 representative tasks across both
+avionics-specific testers and generic bench gear (mixed work-hours,
 deadlines, preferred slots, two environmental soaks, an 18-hour
-continue-next-day firmware bake, and one task that dodges the Wednesday
-maintenance window). On a laptop the solver returns `OPTIMAL` in well
-under a second.
+continue-next-day firmware bake, a continue-next-day frequency stability
+soak, and one task that dodges the Wednesday maintenance window). On a
+laptop the solver returns `OPTIMAL` (makespan = 114 h) in a handful of
+seconds.
 
 ## How to use
 
@@ -147,7 +153,11 @@ platform and bind `Command` on macOS / `Control` elsewhere. On macOS
 the Dock icon is set via PyObjC / AppKit (Tk's `iconphoto` doesn't
 update the Dock for unbundled Python apps); the optional
 `pyobjc-framework-Cocoa` dep is gated to `sys_platform == "darwin"` in
-`requirements.txt`.
+`requirements.txt`. On Windows the multi-resolution
+[`assets/icon.ico`](assets/icon.ico) drives the title bar and taskbar
+via `iconbitmap`, and a `SetCurrentProcessExplicitAppUserModelID` call
+fires before the first window is realised so the taskbar shows the app
+icon instead of Python's logo.
 
 ## Project layout
 
@@ -164,8 +174,8 @@ tests/                 unit tests for models, solver, persistence
 assets/                bundled icon
 docs/                  screenshots used in this README
 main.py                entry point
-sample_project.json    22-task example project
-equipment_pool.json    default 19-unit equipment pool
+sample_project.json    32-task example project
+equipment_pool.json    default 48-unit equipment pool
 ```
 
 ## Run tests
@@ -189,10 +199,10 @@ branch-coverage uploaded to Codecov.
 ## Tuning notes
 
 - Default solver budget: **20 seconds** with **8 search workers**.
-  Realistic instances (≤ 30 tasks) typically reach `OPTIMAL` in well
-  under a second; longer-running solves return the best `FEASIBLE`
+  Realistic instances (≤ 40 tasks) typically reach `OPTIMAL` within a
+  few seconds; longer-running solves return the best `FEASIBLE`
   solution found so far.
-- Total weekly capacity = 19 units × 168 h = **3192 unit-hours**. If
+- Total weekly capacity = 48 units × 168 h = **8064 unit-hours**. If
   aggregate demand exceeds about 80 % of that, expect tighter
   schedules and longer solve times — relax unavailable hours, soften
   deadlines, or reduce task hours.

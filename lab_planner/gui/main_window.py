@@ -8,7 +8,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 from typing import Optional
 
-from .. import APP_NAME, ICON_PNG_PATH, __version__
+from .. import APP_NAME, ICON_ICO_PATH, ICON_PNG_PATH, __version__
 from ..models import (
     Resource,
     ScheduleResult,
@@ -441,8 +441,27 @@ class ScheduleFrame(tk.Frame):
 
 # --- Main app --------------------------------------------------------------
 
+_APP_USER_MODEL_ID = "Mavrikant.TaskResourcesPlanner"
+
+
+def _set_windows_app_user_model_id() -> None:
+    # Windows groups taskbar buttons by AppUserModelID; without this call the
+    # process inherits Python's ID and the taskbar shows the Python logo. Must
+    # run before the first Tk window is realised.
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+            _APP_USER_MODEL_ID
+        )
+    except Exception:
+        pass
+
+
 class App(tk.Tk):
     def __init__(self):
+        _set_windows_app_user_model_id()
         super().__init__()
         self.title(f"{APP_NAME} v{__version__}")
         self.geometry("1600x800")
@@ -460,7 +479,16 @@ class App(tk.Tk):
         self._update_title()
 
     def _apply_icon(self):
-        """Set the window icon from assets/icon.png."""
+        """Set the window/title-bar/taskbar icon."""
+        # Windows: prefer the multi-resolution .ico so taskbar (32×32) and
+        # title bar (16×16) get crisp variants instead of a poorly downscaled
+        # PNG. iconbitmap with .ico is the only path that drives the taskbar.
+        if sys.platform == "win32" and ICON_ICO_PATH.exists():
+            try:
+                self.iconbitmap(default=str(ICON_ICO_PATH))
+            except Exception:
+                pass
+
         try:
             if ICON_PNG_PATH.exists():
                 self._icon_image = tk.PhotoImage(file=str(ICON_PNG_PATH))

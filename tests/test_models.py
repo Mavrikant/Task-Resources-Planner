@@ -20,15 +20,20 @@ from lab_planner.models import (
 )
 
 
-def test_default_pool_totals_19_units():
-    assert sum(r.units for r in DEFAULT_RESOURCES) == 19
+def test_default_pool_totals_48_units():
+    assert sum(r.units for r in DEFAULT_RESOURCES) == 48
 
 
 def test_default_pool_has_expected_types():
     names = {r.name for r in DEFAULT_RESOURCES}
     assert names == {"VSG", "VSGRS", "OBB", "IFF", "IFR", "1553", "RFCU",
                      "ADF Tester", "Temperature Test Chamber", "A429",
-                     "Oscilloscope", "AA"}
+                     "Oscilloscope", "AA",
+                     "Power Supply", "Bench Multimeter", "Function Generator",
+                     "Spectrum Analyzer", "Network Analyzer", "Logic Analyzer",
+                     "Frequency Counter", "Soldering Station",
+                     "DC Electronic Load", "Workstation PC", "Microscope",
+                     "LCR Meter", "Calibration Kit"}
 
 
 def test_horizon_is_one_week():
@@ -80,8 +85,8 @@ def test_slot_conversions_roundtrip():
 
 def test_expand_units_assigns_unique_ids():
     units = expand_units(DEFAULT_RESOURCES)
-    assert len(units) == 19
-    assert [u[0] for u in units] == list(range(19))
+    assert len(units) == 48
+    assert [u[0] for u in units] == list(range(48))
 
 
 def test_unit_label_singletons_have_no_index():

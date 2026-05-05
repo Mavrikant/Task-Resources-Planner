@@ -127,6 +127,19 @@ DEFAULT_RESOURCES: list[Resource] = [
     Resource("A429",                      1),
     Resource("Oscilloscope",              1),
     Resource("AA",    2),
+    Resource("Power Supply",         4),
+    Resource("Bench Multimeter",     4),
+    Resource("Function Generator",   2),
+    Resource("Spectrum Analyzer",    2),
+    Resource("Network Analyzer",     1),
+    Resource("Logic Analyzer",       2),
+    Resource("Frequency Counter",    2),
+    Resource("Soldering Station",    3),
+    Resource("DC Electronic Load",   2),
+    Resource("Workstation PC",       4),
+    Resource("Microscope",           1),
+    Resource("LCR Meter",            1),
+    Resource("Calibration Kit",      1),
 ]
 
 

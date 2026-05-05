@@ -6,3 +6,4 @@ APP_NAME = "Task-Resources Planner"
 
 _ASSETS = Path(__file__).resolve().parent.parent / "assets"
 ICON_PNG_PATH = _ASSETS / "icon.png"
+ICON_ICO_PATH = _ASSETS / "icon.ico"

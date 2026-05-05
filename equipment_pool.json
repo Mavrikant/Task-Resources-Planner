@@ -49,6 +49,58 @@
     {
       "name": "AA",
       "units": 2
+    },
+    {
+      "name": "Power Supply",
+      "units": 4
+    },
+    {
+      "name": "Bench Multimeter",
+      "units": 4
+    },
+    {
+      "name": "Function Generator",
+      "units": 2
+    },
+    {
+      "name": "Spectrum Analyzer",
+      "units": 2
+    },
+    {
+      "name": "Network Analyzer",
+      "units": 1
+    },
+    {
+      "name": "Logic Analyzer",
+      "units": 2
+    },
+    {
+      "name": "Frequency Counter",
+      "units": 2
+    },
+    {
+      "name": "Soldering Station",
+      "units": 3
+    },
+    {
+      "name": "DC Electronic Load",
+      "units": 2
+    },
+    {
+      "name": "Workstation PC",
+      "units": 4
+    },
+    {
+      "name": "Microscope",
+      "units": 1
+    },
+    {
+      "name": "LCR Meter",
+      "units": 1
+    },
+    {
+      "name": "Calibration Kit",
+      "units": 1
     }
   ]
 }

@@ -48,6 +48,58 @@
     {
       "name": "AA",
       "units": 2
+    },
+    {
+      "name": "Power Supply",
+      "units": 4
+    },
+    {
+      "name": "Bench Multimeter",
+      "units": 4
+    },
+    {
+      "name": "Function Generator",
+      "units": 2
+    },
+    {
+      "name": "Spectrum Analyzer",
+      "units": 2
+    },
+    {
+      "name": "Network Analyzer",
+      "units": 1
+    },
+    {
+      "name": "Logic Analyzer",
+      "units": 2
+    },
+    {
+      "name": "Frequency Counter",
+      "units": 2
+    },
+    {
+      "name": "Soldering Station",
+      "units": 3
+    },
+    {
+      "name": "DC Electronic Load",
+      "units": 2
+    },
+    {
+      "name": "Workstation PC",
+      "units": 4
+    },
+    {
+      "name": "Microscope",
+      "units": 1
+    },
+    {
+      "name": "LCR Meter",
+      "units": 1
+    },
+    {
+      "name": "Calibration Kit",
+      "units": 1
     }
   ],
   "tasks": [
@@ -55,7 +107,8 @@
       "name": "Initial config burn",
       "requirements": {
         "VSG": 1,
-        "OBB": 1
+        "OBB": 1,
+        "Workstation PC": 1
       },
       "hours": 1,
       "preferred_slots": [],
@@ -83,7 +136,8 @@
       "requirements": {
         "VSG": 1,
         "OBB": 1,
-        "AA": 1
+        "AA": 1,
+        "Power Supply": 1
       },
       "hours": 2,
       "preferred_slots": [],
@@ -134,7 +188,8 @@
       "name": "Ground link verification",
       "requirements": {
         "RFCU": 1,
-        "IFF": 1
+        "IFF": 1,
+        "Spectrum Analyzer": 1
       },
       "hours": 3,
       "preferred_slots": [],
@@ -440,7 +495,8 @@
       "name": "Multi-frequency interference",
       "requirements": {
         "VSG": 1,
-        "RFCU": 1
+        "RFCU": 1,
+        "Spectrum Analyzer": 1
       },
       "hours": 5,
       "preferred_slots": [],
@@ -493,7 +549,8 @@
       "name": "EW signal sweep",
       "requirements": {
         "VSGRS": 1,
-        "VSG": 1
+        "VSG": 1,
+        "Spectrum Analyzer": 1
       },
       "hours": 6,
       "preferred_slots": [],
@@ -699,6 +756,153 @@
       ],
       "work_hours_only": true,
       "continue_next_day": true,
+      "deadline": null
+    },
+    {
+      "name": "PCB rework & repair",
+      "requirements": {
+        "Soldering Station": 1,
+        "Bench Multimeter": 1,
+        "Microscope": 1
+      },
+      "hours": 3,
+      "preferred_slots": [],
+      "unavailable_slots": [],
+      "work_hours_only": true,
+      "continue_next_day": false,
+      "deadline": 42
+    },
+    {
+      "name": "DC characterization sweep",
+      "requirements": {
+        "Power Supply": 2,
+        "DC Electronic Load": 1,
+        "Bench Multimeter": 1
+      },
+      "hours": 5,
+      "preferred_slots": [],
+      "unavailable_slots": [],
+      "work_hours_only": true,
+      "continue_next_day": false,
+      "deadline": 90
+    },
+    {
+      "name": "Logic analyzer capture",
+      "requirements": {
+        "Logic Analyzer": 1,
+        "Function Generator": 1,
+        "Oscilloscope": 1
+      },
+      "hours": 4,
+      "preferred_slots": [],
+      "unavailable_slots": [],
+      "work_hours_only": true,
+      "continue_next_day": false,
+      "deadline": null
+    },
+    {
+      "name": "S-parameter sweep",
+      "requirements": {
+        "Network Analyzer": 1,
+        "RFCU": 1,
+        "Function Generator": 1
+      },
+      "hours": 5,
+      "preferred_slots": [],
+      "unavailable_slots": [],
+      "work_hours_only": true,
+      "continue_next_day": false,
+      "deadline": 90
+    },
+    {
+      "name": "Frequency stability soak",
+      "requirements": {
+        "Frequency Counter": 2,
+        "Function Generator": 1
+      },
+      "hours": 8,
+      "preferred_slots": [],
+      "unavailable_slots": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "work_hours_only": true,
+      "continue_next_day": true,
+      "deadline": null
+    },
+    {
+      "name": "Component-level inspection",
+      "requirements": {
+        "Microscope": 1,
+        "Soldering Station": 1
+      },
+      "hours": 2,
+      "preferred_slots": [],
+      "unavailable_slots": [],
+      "work_hours_only": true,
+      "continue_next_day": false,
+      "deadline": null
+    },
+    {
+      "name": "Firmware regression",
+      "requirements": {
+        "Workstation PC": 2,
+        "A429": 1
+      },
+      "hours": 4,
+      "preferred_slots": [],
+      "unavailable_slots": [],
+      "work_hours_only": true,
+      "continue_next_day": false,
+      "deadline": null
+    },
+    {
+      "name": "Calibration verification",
+      "requirements": {
+        "Calibration Kit": 1,
+        "Bench Multimeter": 2,
+        "Frequency Counter": 1
+      },
+      "hours": 3,
+      "preferred_slots": [],
+      "unavailable_slots": [],
+      "work_hours_only": true,
+      "continue_next_day": false,
+      "deadline": 66
+    },
+    {
+      "name": "LCR characterization",
+      "requirements": {
+        "LCR Meter": 1,
+        "Workstation PC": 1
+      },
+      "hours": 2,
+      "preferred_slots": [],
+      "unavailable_slots": [],
+      "work_hours_only": true,
+      "continue_next_day": false,
+      "deadline": null
+    },
+    {
+      "name": "Soldering qualification",
+      "requirements": {
+        "Soldering Station": 2,
+        "Microscope": 1,
+        "Bench Multimeter": 1
+      },
+      "hours": 3,
+      "preferred_slots": [],
+      "unavailable_slots": [],
+      "work_hours_only": true,
+      "continue_next_day": false,
       "deadline": null
     }
   ]

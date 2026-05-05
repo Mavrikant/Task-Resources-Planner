@@ -8,7 +8,21 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 - App icon — bundled at `assets/icon.png`, applied to the window via
-  `iconphoto` and (on macOS) the Dock via PyObjC/AppKit.
+  `iconphoto` and (on macOS) the Dock via PyObjC/AppKit. On Windows the
+  multi-resolution `assets/icon.ico` drives the title bar and taskbar
+  via `iconbitmap`, and a `SetCurrentProcessExplicitAppUserModelID` call
+  before the first window is realised replaces Python's default taskbar
+  identity so the taskbar groups under the app's own icon.
+- Default equipment pool grown to 25 types / 48 units — adds generic
+  bench gear (Power Supply, Bench Multimeter, Function/Spectrum/Network/
+  Logic Analyzers, Frequency Counter, Soldering Station, DC Electronic
+  Load, Workstation PC, Microscope, LCR Meter, Calibration Kit) on top
+  of the original avionics-specific testers.
+- Sample project grown to 32 tasks — adds 10 tasks exercising the
+  generic bench gear (PCB rework, DC characterization, logic analyzer
+  capture, S-parameter sweep, frequency stability soak, component-level
+  inspection, firmware regression, calibration verification, LCR
+  characterization, soldering qualification).
 - `Task.continue_next_day`: when paired with `work_hours_only`, long tasks
   may span multiple consecutive work-day windows (e.g. 18 h becomes Mon
   08-18 + Tue 08-16 with the equipment released overnight). Solver
