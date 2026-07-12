@@ -1,3 +1,8 @@
+# [DEPRECATED]
+# Development of this project is frozen. 
+# Please use [Mavrikant/Task-Resources-Planner](https://github.com/Mavrikant/OptimalTaskPlanner) instead. 
+
+
 # Task-Resources Planner
 
 [![tests](https://github.com/Mavrikant/Task-Resources-Planner/actions/workflows/tests.yml/badge.svg)](https://github.com/Mavrikant/Task-Resources-Planner/actions/workflows/tests.yml)
